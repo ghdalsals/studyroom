@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Care Concierge 실시간 좌석 현황</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f7f6; padding: 20px; }
+        .dashboard { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
+        .stat-box { padding: 15px 30px; border-radius: 10px; color: white; font-size: 1.2rem; font-weight: bold; }
+        .bg-empty { background-color: #2ecc71; }
+        .bg-occupied { background-color: #e74c3c; }
+        
+        /* 좌석을 바둑판 배열로 보여주는 그리드 */
+        #seat-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .seat {
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease; /* 색상 변경 시 부드러운 애니메이션 */
+        }
+        .seat.empty { background-color: #2ecc71; }
+        .seat.occupied { background-color: #e74c3c; }
+        .seat.uncertain { background-color: #f1c40f; color: black; }
+        
+        #update-time { margin-top: 20px; color: #7f8c8d; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <h1>현재 좌석 현황</h1>
+    
+    <div class="dashboard">
+        <div class="stat-box bg-empty">빈 좌석: <span id="count-empty">0</span></div>
+        <div class="stat-box bg-occupied">사용 중: <span id="count-occupied">0</span></div>
+    </div>
+
+    <div id="seat-container">
+        </div>
+
+    <div id="update-time">마지막 업데이트: 대기 중...</div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <script>
+        // 1. Firebase 설정 (Firebase 콘솔 '프로젝트 설정 > 일반 > 내 앱'에서 확인 가능)
+        const firebaseConfig = {
+            databaseURL: "https://본인-프로젝트-id.firebaseio.com/",
+            // 웹앱 설정 시 나오는 apiKey, projectId 등 나머지 정보도 여기에 복사
+        };
+
+        // 2. Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 3. 실시간 데이터 수신 대기 (on 메소드가 핵심입니다)
+        const statusRef = db.ref('studyroom/live_status');
+        
+        statusRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            // 통계 업데이트
+            document.getElementById('count-empty').innerText = data.empty_count;
+            document.getElementById('count-occupied').innerText = data.occupied_count;
+            document.getElementById('update-time').innerText = "마지막 업데이트: " + data.updated_at;
+
+            // 좌석 그리드 렌더링
+            const container = document.getElementById('seat-container');
+            container.innerHTML = ''; // 기존 내용 지우기
+
+            data.seats.forEach(seat => {
+                const div = document.createElement('div');
+                div.className = `seat ${seat.state}`; // 상태에 따라 클래스(색상) 적용
+                div.innerHTML = `${seat.seat_id}<br><small>${(seat.confidence * 100).toFixed(0)}%</small>`;
+                container.appendChild(div);
+            });
+        });
+    </script>
+</body>
+</html>
