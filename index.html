@@ -7,20 +7,20 @@
     <style>
         :root {
             --grid-gap: 10px;
-            --page-bg: #F8FAFC;
+            --page-bg: #FAFBFC;
             --board-bg: #FFFFFF;
-            --seat-inactive: #E7ECF2;
-            --seat-border: #D6DEE8;
+            --seat-inactive: #EEF2F6;
+            --seat-border: #DCE3EA;
             --title-text: #1F2937;
             --body-text: #475569;
-            --timestamp-text: #64748B;
+            --timestamp-text: #94A3B8;
             --available-seat: #4ADE80;
             --occupied-seat: #F87171;
-            --button-bg: #D6DCE3;
-            --button-hover: #C8D0D9;
-            --button-text: #334155;
-            --button-border: #D6DCE3;
-            --soft-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+            --button-bg: #EEF2F6;
+            --button-hover: #E2E8F0;
+            --button-text: #475569;
+            --button-border: #EEF2F6;
+            --soft-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
         }
 
         * {
@@ -84,43 +84,47 @@
         .topbar {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             margin: 0;
         }
 
         .topbar .top-button {
-            flex: 1;
-            width: auto;
+            flex: 0 0 auto;
+            width: 74px;
         }
 
         .top-button {
-            width: 92px;
+            width: 74px;
             border: 1px solid var(--button-border);
-            border-radius: 14px;
-            padding: 10px 0;
-            font-size: 0.95rem;
+            border-radius: 12px;
+            padding: 8px 0;
+            font-size: 0.88rem;
             font-weight: 700;
             cursor: pointer;
             color: var(--button-text);
             background: var(--button-bg);
-            transition: background-color 0.15s ease, box-shadow 0.15s ease;
+            transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
             box-shadow: var(--soft-shadow);
         }
 
         .top-button.settings {
             background: var(--button-bg);
+            border-color: var(--button-bg);
         }
 
         .top-button.details {
             background: var(--button-bg);
+            border-color: var(--button-bg);
         }
 
         .top-button:hover {
             background: var(--button-hover);
+            border-color: var(--button-hover);
+            transform: translateY(-1px);
         }
 
         .top-button.active {
-            box-shadow: 0 0 0 2px rgba(111, 119, 132, 0.24), var(--soft-shadow);
+            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.24), var(--soft-shadow);
         }
 
         .settings-panel {
@@ -159,10 +163,12 @@
 
         .settings-actions button:hover {
             background: var(--button-hover);
+            border-color: var(--button-hover);
         }
 
         #update-time {
             color: var(--timestamp-text);
+            margin-top: 14px;
         }
 
         .board-wrap {
@@ -251,10 +257,6 @@
             line-height: 1.1;
         }
 
-        #update-time {
-            margin-top: 14px;
-        }
-
         @media (max-width: 720px) {
             :root {
                 --grid-gap: 8px;
@@ -268,8 +270,11 @@
                 min-width: 150px;
             }
 
+            .topbar .top-button,
             .top-button {
-                width: 84px;
+                width: 68px;
+                font-size: 0.84rem;
+                padding: 7px 0;
             }
         }
 
@@ -283,7 +288,7 @@
             }
 
             .topbar {
-                gap: 10px;
+                gap: 8px;
             }
         }
     </style>
@@ -294,8 +299,12 @@
 
         <div class="header-layout">
             <div class="dashboard">
-                <div class="stat-box available"><span id="available-label"></span>: <span id="count-empty">0</span></div>
-                <div class="stat-box occupied"><span id="occupied-label"></span>: <span id="count-occupied">0</span></div>
+                <div class="stat-box available">
+                    <span id="available-label"></span>: <span id="count-empty">0</span>
+                </div>
+                <div class="stat-box occupied">
+                    <span id="occupied-label"></span>: <span id="count-occupied">0</span>
+                </div>
             </div>
 
             <div class="topbar">
@@ -322,21 +331,21 @@
 
     <script>
         const TEXT = {
-            pageTitle: "\uC2E4\uC2DC\uAC04 \uC88C\uC11D \uD604\uD669",
-            available: "\uC0AC\uC6A9 \uAC00\uB2A5",
-            occupied: "\uC0AC\uC6A9 \uC911",
-            settings: "\uC124\uC815",
-            details: "\uC0C1\uC138",
-            rotateLayout: "180\uB3C4 \uD68C\uC804",
-            chalkboard: "\uCE60\uD310",
-            pinPrompt: "\uC124\uC815\uC744 \uC5F4\uB824\uBA74 \uAD00\uB9AC\uC790 PIN\uC744 \uC785\uB825\uD558\uC138\uC694.",
-            pinWrong: "PIN\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC544 \uC124\uC815\uC744 \uC5F4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
-            updateWaiting: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: \uB300\uAE30 \uC911...",
-            updatePrefix: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: ",
-            unknown: "\uD655\uC778 \uBD88\uAC00",
-            connectionError: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: \uC5F0\uACB0 \uC624\uB958",
-            emptySlot: "\uBE48 \uC2AC\uB86F",
-            noInfo: "\uC815\uBCF4 \uC5C6\uC74C"
+            pageTitle: "실시간 좌석 현황",
+            available: "사용 가능",
+            occupied: "사용 중",
+            settings: "설정",
+            details: "상세",
+            rotateLayout: "180도 회전",
+            chalkboard: "칠판",
+            pinPrompt: "설정을 열려면 관리자 PIN을 입력하세요.",
+            pinWrong: "PIN이 일치하지 않아 설정을 열 수 없습니다.",
+            updateWaiting: "마지막 업데이트: 대기 중...",
+            updatePrefix: "마지막 업데이트: ",
+            unknown: "확인 불가",
+            connectionError: "마지막 업데이트: 연결 오류",
+            emptySlot: "빈 슬롯",
+            noInfo: "정보 없음"
         };
 
         const firebaseConfig = {
@@ -345,7 +354,7 @@
 
         const STORAGE_KEY = "care-concierge-classroom-layout-v5";
         const LAYOUT_PATH = "studyroom/layout_config";
-        const SETTINGS_PIN = "2468"; // Change this before real deployment.
+        const SETTINGS_PIN = "2468"; // 실제 배포 전 변경 권장
         const AISLE_RATIO = 0.5;
         const GROUPS = [1, 2, 2, 2, 2];
 
@@ -456,9 +465,7 @@
         function loadSavedState() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) {
-                    return;
-                }
+                if (!raw) return;
 
                 const saved = JSON.parse(raw);
                 state.layout = isValidLayout(saved.layout) ? cloneLayout(saved.layout) : cloneLayout(BASE_LAYOUT);
@@ -470,10 +477,13 @@
         }
 
         function cacheState() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                layout: state.layout,
-                seatOrder: state.seatOrder
-            }));
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    layout: state.layout,
+                    seatOrder: state.seatOrder
+                })
+            );
         }
 
         function applySharedLayout(data) {
@@ -490,9 +500,7 @@
         function saveState() {
             cacheState();
 
-            if (!layoutRef) {
-                return;
-            }
+            if (!layoutRef) return;
 
             layoutRef.set({
                 layout: state.layout,
@@ -534,7 +542,6 @@
             });
 
             state.seatOrder = normalizeSeatOrder(kept);
-
             return before !== JSON.stringify(state.seatOrder);
         }
 
@@ -543,18 +550,9 @@
         }
 
         function getSeatClass(seat) {
-            if (!seat) {
-                return "slot-empty";
-            }
-
-            if (seat.state === "empty") {
-                return "available";
-            }
-
-            if (seat.state === "occupied") {
-                return "in-use";
-            }
-
+            if (!seat) return "slot-empty";
+            if (seat.state === "empty") return "available";
+            if (seat.state === "occupied") return "in-use";
             return "uncertain";
         }
 
@@ -583,9 +581,7 @@
             const occupiedColumns = new Set(layout.slots.map((slot) => slot.x));
 
             return Array.from({ length: layout.cols }, (_, colIndex) => {
-                return occupiedColumns.has(colIndex)
-                    ? "1fr"
-                    : `${AISLE_RATIO}fr`;
+                return occupiedColumns.has(colIndex) ? "1fr" : `${AISLE_RATIO}fr`;
             }).join(" ");
         }
 
@@ -598,15 +594,16 @@
             );
         }
 
+        // 요청 반영: 기본 상태에서는 칠판이 아래, 180도 회전 시 위
         function getChalkboardPlacement(layout) {
             const rotated = isLayoutRotated180(layout);
 
             return {
-                row: rotated ? layout.rows + 1 : 1,
-                seatRowOffset: rotated ? 0 : 1,
+                row: rotated ? 1 : layout.rows + 1,
+                seatRowOffset: rotated ? 1 : 0,
                 templateRows: rotated
-                    ? `repeat(${layout.rows}, auto) auto`
-                    : `auto repeat(${layout.rows}, auto)`
+                    ? `auto repeat(${layout.rows}, auto)`
+                    : `repeat(${layout.rows}, auto) auto`
             };
         }
 
@@ -736,9 +733,11 @@
             const data = snapshot.val() || {};
             state.seats = normalizeSeats(data.seats);
             state.hasSeatSnapshot = true;
+
             if (syncSeatOrder() && state.hasRemoteLayout) {
                 saveState();
             }
+
             renderStats(data);
             renderBoard();
         }, (error) => {
