@@ -2,86 +2,748 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Care Concierge 실시간 좌석 현황</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care Concierge Seat Status</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f7f6; padding: 20px; }
-        .dashboard { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
-        .stat-box { padding: 15px 30px; border-radius: 10px; color: white; font-size: 1.2rem; font-weight: bold; }
-        .bg-empty { background-color: #2ecc71; }
-        .bg-occupied { background-color: #e74c3c; }
-        
-        /* 좌석을 바둑판 배열로 보여주는 그리드 */
-        #seat-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            max-width: 800px;
-            margin: 0 auto;
+        :root {
+            --grid-gap: 10px;
+            --page-bg: #F8FAFC;
+            --board-bg: #FFFFFF;
+            --seat-inactive: #E7ECF2;
+            --seat-border: #D6DEE8;
+            --title-text: #1F2937;
+            --body-text: #475569;
+            --timestamp-text: #64748B;
+            --available-seat: #4ADE80;
+            --occupied-seat: #F87171;
+            --button-bg: #D6DCE3;
+            --button-hover: #C8D0D9;
+            --button-text: #334155;
+            --button-border: #D6DCE3;
+            --soft-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
         }
-        .seat {
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
             padding: 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            transition: all 0.3s ease; /* 색상 변경 시 부드러운 애니메이션 */
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--page-bg);
+            color: var(--body-text);
         }
-        .seat.empty { background-color: #2ecc71; }
-        .seat.occupied { background-color: #e74c3c; }
-        .seat.uncertain { background-color: #f1c40f; color: black; }
-        
-        #update-time { margin-top: 20px; color: #7f8c8d; font-size: 0.9rem; }
+
+        .page {
+            max-width: 1120px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            font-size: 2rem;
+            color: var(--title-text);
+        }
+
+        .header-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            justify-content: center;
+            align-items: start;
+            gap: 14px;
+            margin: 0 auto 18px;
+            max-width: 430px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .stat-box {
+            min-width: 190px;
+            padding: 14px 24px;
+            border-radius: 14px;
+            color: white;
+            font-weight: 700;
+            box-shadow: var(--soft-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-box.available {
+            background: var(--available-seat);
+        }
+
+        .stat-box.occupied {
+            background: var(--occupied-seat);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        .topbar .top-button {
+            flex: 1;
+            width: auto;
+        }
+
+        .top-button {
+            width: 92px;
+            border: 1px solid var(--button-border);
+            border-radius: 14px;
+            padding: 10px 0;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--button-text);
+            background: var(--button-bg);
+            transition: background-color 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: var(--soft-shadow);
+        }
+
+        .top-button.settings {
+            background: var(--button-bg);
+        }
+
+        .top-button.details {
+            background: var(--button-bg);
+        }
+
+        .top-button:hover {
+            background: var(--button-hover);
+        }
+
+        .top-button.active {
+            box-shadow: 0 0 0 2px rgba(111, 119, 132, 0.24), var(--soft-shadow);
+        }
+
+        .settings-panel {
+            margin: 0 auto 16px;
+            max-width: 980px;
+            padding: 16px;
+            border-radius: 18px;
+            background: var(--board-bg);
+            box-shadow: var(--soft-shadow);
+            border: 1px solid var(--seat-border);
+        }
+
+        .settings-panel[hidden] {
+            display: none;
+        }
+
+        .settings-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 0;
+        }
+
+        .settings-actions button {
+            border: 1px solid var(--button-border);
+            border-radius: 999px;
+            padding: 10px 16px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            background: var(--button-bg);
+            color: var(--button-text);
+            box-shadow: var(--soft-shadow);
+        }
+
+        .settings-actions button:hover {
+            background: var(--button-hover);
+        }
+
+        #update-time {
+            color: var(--timestamp-text);
+        }
+
+        .board-wrap {
+            overflow: hidden;
+            padding: 14px;
+            background: var(--board-bg);
+            border-radius: 18px;
+            box-shadow: var(--soft-shadow);
+            border: 1px solid var(--seat-border);
+        }
+
+        #board {
+            display: grid;
+            width: 100%;
+            margin: 0 auto;
+            gap: var(--grid-gap);
+        }
+
+        .chalkboard {
+            border: 1px solid var(--seat-border);
+            border-radius: 10px;
+            background: var(--seat-inactive);
+            color: var(--body-text);
+            width: clamp(180px, 34%, 320px);
+            aspect-ratio: 11 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            justify-self: center;
+            align-self: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            box-shadow: var(--soft-shadow);
+        }
+
+        .seat {
+            border: 1px solid var(--seat-border);
+            border-radius: 12px;
+            width: 100%;
+            min-width: 0;
+            min-height: 0;
+            aspect-ratio: 3 / 2;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            font-weight: 700;
+            box-shadow: var(--soft-shadow);
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .seat.available {
+            background: var(--available-seat);
+            color: var(--title-text);
+        }
+
+        .seat.in-use {
+            background: var(--occupied-seat);
+            color: var(--title-text);
+        }
+
+        .seat.uncertain {
+            background: #FBBF24;
+            color: var(--title-text);
+        }
+
+        .seat.slot-empty {
+            background: var(--seat-inactive);
+            color: var(--body-text);
+        }
+
+        .seat.readonly {
+            cursor: default;
+        }
+
+        .seat-text {
+            font-size: 0.94rem;
+            line-height: 1.15;
+        }
+
+        .seat-meta {
+            font-size: 0.8rem;
+            line-height: 1.1;
+        }
+
+        #update-time {
+            margin-top: 14px;
+        }
+
+        @media (max-width: 720px) {
+            :root {
+                --grid-gap: 8px;
+            }
+
+            body {
+                padding: 14px;
+            }
+
+            .stat-box {
+                min-width: 150px;
+            }
+
+            .top-button {
+                width: 84px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .header-layout {
+                max-width: 260px;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
+    <div class="page">
+        <h1 id="page-title"></h1>
 
-    <h1>현재 좌석 현황</h1>
-    
-    <div class="dashboard">
-        <div class="stat-box bg-empty">빈 좌석: <span id="count-empty">0</span></div>
-        <div class="stat-box bg-occupied">사용 중: <span id="count-occupied">0</span></div>
-    </div>
+        <div class="header-layout">
+            <div class="dashboard">
+                <div class="stat-box available"><span id="available-label"></span>: <span id="count-empty">0</span></div>
+                <div class="stat-box occupied"><span id="occupied-label"></span>: <span id="count-occupied">0</span></div>
+            </div>
 
-    <div id="seat-container">
+            <div class="topbar">
+                <button id="settings-toggle" class="top-button settings" type="button"></button>
+                <button id="details-toggle" class="top-button details" type="button"></button>
+            </div>
         </div>
 
-    <div id="update-time">마지막 업데이트: 대기 중...</div>
+        <section id="settings-panel" class="settings-panel" hidden>
+            <div class="settings-actions">
+                <button id="rotate-layout" type="button"></button>
+            </div>
+        </section>
+
+        <div class="board-wrap">
+            <div id="board"></div>
+        </div>
+
+        <div id="update-time"></div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
     <script>
-        // 1. Firebase 설정 (Firebase 콘솔 '프로젝트 설정 > 일반 > 내 앱'에서 확인 가능)
-        const firebaseConfig = {
-            databaseURL: "https://studyroom-a6399-default-rtdb.firebaseio.com/",
-            // 웹앱 설정 시 나오는 apiKey, projectId 등 나머지 정보도 여기에 복사
+        const TEXT = {
+            pageTitle: "\uC2E4\uC2DC\uAC04 \uC88C\uC11D \uD604\uD669",
+            available: "\uC0AC\uC6A9 \uAC00\uB2A5",
+            occupied: "\uC0AC\uC6A9 \uC911",
+            settings: "\uC124\uC815",
+            details: "\uC0C1\uC138",
+            rotateLayout: "180\uB3C4 \uD68C\uC804",
+            chalkboard: "\uCE60\uD310",
+            pinPrompt: "\uC124\uC815\uC744 \uC5F4\uB824\uBA74 \uAD00\uB9AC\uC790 PIN\uC744 \uC785\uB825\uD558\uC138\uC694.",
+            pinWrong: "PIN\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC544 \uC124\uC815\uC744 \uC5F4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+            updateWaiting: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: \uB300\uAE30 \uC911...",
+            updatePrefix: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: ",
+            unknown: "\uD655\uC778 \uBD88\uAC00",
+            connectionError: "\uB9C8\uC9C0\uB9C9 \uC5C5\uB370\uC774\uD2B8: \uC5F0\uACB0 \uC624\uB958",
+            emptySlot: "\uBE48 \uC2AC\uB86F",
+            noInfo: "\uC815\uBCF4 \uC5C6\uC74C"
         };
 
-        // 2. Firebase 초기화
+        const firebaseConfig = {
+            databaseURL: "https://studyroom-a6399-default-rtdb.firebaseio.com/"
+        };
+
+        const STORAGE_KEY = "care-concierge-classroom-layout-v5";
+        const LAYOUT_PATH = "studyroom/layout_config";
+        const SETTINGS_PIN = "2468"; // Change this before real deployment.
+        const AISLE_RATIO = 0.5;
+        const GROUPS = [1, 2, 2, 2, 2];
+
+        function buildBaseLayout() {
+            const slots = [];
+            let totalColumns = 0;
+
+            GROUPS.forEach((groupWidth, index) => {
+                totalColumns += groupWidth;
+                if (index < GROUPS.length - 1) {
+                    totalColumns += 1;
+                }
+            });
+
+            for (let row = 0; row < 5; row += 1) {
+                let x = 0;
+
+                GROUPS.forEach((groupWidth, groupIndex) => {
+                    for (let seatOffset = 0; seatOffset < groupWidth; seatOffset += 1) {
+                        slots.push({ x: x + seatOffset, y: row });
+                    }
+
+                    x += groupWidth;
+                    if (groupIndex < GROUPS.length - 1) {
+                        x += 1;
+                    }
+                });
+            }
+
+            return { cols: totalColumns, rows: 5, slots };
+        }
+
+        const BASE_LAYOUT = buildBaseLayout();
+
+        const state = {
+            seats: [],
+            seatOrder: [],
+            layout: cloneLayout(BASE_LAYOUT),
+            isSettingsOpen: false,
+            showDetails: false,
+            hasSeatSnapshot: false,
+            hasRemoteLayout: false
+        };
+
+        let layoutRef = null;
+
+        const elements = {
+            pageTitle: document.getElementById("page-title"),
+            availableLabel: document.getElementById("available-label"),
+            occupiedLabel: document.getElementById("occupied-label"),
+            countEmpty: document.getElementById("count-empty"),
+            countOccupied: document.getElementById("count-occupied"),
+            board: document.getElementById("board"),
+            updateTime: document.getElementById("update-time"),
+            settingsToggle: document.getElementById("settings-toggle"),
+            detailsToggle: document.getElementById("details-toggle"),
+            settingsPanel: document.getElementById("settings-panel"),
+            rotateLayout: document.getElementById("rotate-layout")
+        };
+
+        function applyStaticText() {
+            document.title = TEXT.pageTitle;
+            elements.pageTitle.textContent = TEXT.pageTitle;
+            elements.availableLabel.textContent = TEXT.available;
+            elements.occupiedLabel.textContent = TEXT.occupied;
+            elements.settingsToggle.textContent = TEXT.settings;
+            elements.detailsToggle.textContent = TEXT.details;
+            elements.rotateLayout.textContent = TEXT.rotateLayout;
+            elements.updateTime.textContent = TEXT.updateWaiting;
+        }
+
+        function cloneLayout(layout) {
+            return {
+                cols: layout.cols,
+                rows: layout.rows,
+                slots: layout.slots.map((slot) => ({ ...slot }))
+            };
+        }
+
+        function isValidLayout(layout) {
+            return Boolean(
+                layout &&
+                Number.isInteger(layout.cols) &&
+                Number.isInteger(layout.rows) &&
+                Array.isArray(layout.slots) &&
+                layout.slots.length === BASE_LAYOUT.slots.length
+            );
+        }
+
+        function normalizeSeatOrder(order) {
+            const next = Array(BASE_LAYOUT.slots.length).fill(null);
+
+            if (!Array.isArray(order)) {
+                return next;
+            }
+
+            order.slice(0, next.length).forEach((seatId, index) => {
+                next[index] = typeof seatId === "string" && seatId ? seatId : null;
+            });
+
+            return next;
+        }
+
+        function compareSeatIds(left, right) {
+            return left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" });
+        }
+
+        function loadSavedState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) {
+                    return;
+                }
+
+                const saved = JSON.parse(raw);
+                state.layout = isValidLayout(saved.layout) ? cloneLayout(saved.layout) : cloneLayout(BASE_LAYOUT);
+                state.seatOrder = normalizeSeatOrder(saved.seatOrder);
+            } catch (error) {
+                state.layout = cloneLayout(BASE_LAYOUT);
+                state.seatOrder = normalizeSeatOrder([]);
+            }
+        }
+
+        function cacheState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                layout: state.layout,
+                seatOrder: state.seatOrder
+            }));
+        }
+
+        function applySharedLayout(data) {
+            if (!data || !isValidLayout(data.layout)) {
+                return false;
+            }
+
+            state.layout = cloneLayout(data.layout);
+            state.seatOrder = normalizeSeatOrder(data.seatOrder);
+            cacheState();
+            return true;
+        }
+
+        function saveState() {
+            cacheState();
+
+            if (!layoutRef) {
+                return;
+            }
+
+            layoutRef.set({
+                layout: state.layout,
+                seatOrder: state.seatOrder,
+                updated_at: new Date().toISOString()
+            }).catch((error) => {
+                console.error("Firebase layout save error:", error);
+                window.alert("레이아웃 저장 중 오류가 발생했습니다.");
+            });
+        }
+
+        function normalizeSeats(rawSeats) {
+            const seats = Array.isArray(rawSeats) ? rawSeats : Object.values(rawSeats || {});
+
+            return seats
+                .filter(Boolean)
+                .map((seat, index) => ({
+                    ...seat,
+                    seat_id: String(seat.seat_id ?? `Seat-${index + 1}`)
+                }));
+        }
+
+        function syncSeatOrder() {
+            if (!state.hasSeatSnapshot) {
+                return false;
+            }
+
+            const before = JSON.stringify(state.seatOrder);
+            const liveIds = state.seats.map((seat) => seat.seat_id).sort(compareSeatIds);
+            const liveSet = new Set(liveIds);
+            const kept = state.seatOrder.filter((seatId) => seatId && liveSet.has(seatId));
+            const seen = new Set(kept);
+
+            liveIds.forEach((seatId) => {
+                if (!seen.has(seatId) && kept.length < BASE_LAYOUT.slots.length) {
+                    kept.push(seatId);
+                    seen.add(seatId);
+                }
+            });
+
+            state.seatOrder = normalizeSeatOrder(kept);
+
+            return before !== JSON.stringify(state.seatOrder);
+        }
+
+        function getSeatMap() {
+            return new Map(state.seats.map((seat) => [seat.seat_id, seat]));
+        }
+
+        function getSeatClass(seat) {
+            if (!seat) {
+                return "slot-empty";
+            }
+
+            if (seat.state === "empty") {
+                return "available";
+            }
+
+            if (seat.state === "occupied") {
+                return "in-use";
+            }
+
+            return "uncertain";
+        }
+
+        function requestSettingsAccess() {
+            const enteredPin = window.prompt(TEXT.pinPrompt, "");
+
+            if (enteredPin === null) {
+                return false;
+            }
+
+            if (enteredPin !== SETTINGS_PIN) {
+                window.alert(TEXT.pinWrong);
+                return false;
+            }
+
+            return true;
+        }
+
+        function renderControls() {
+            elements.settingsPanel.hidden = !state.isSettingsOpen;
+            elements.settingsToggle.classList.toggle("active", state.isSettingsOpen);
+            elements.detailsToggle.classList.toggle("active", state.showDetails);
+        }
+
+        function buildColumnTemplate(layout) {
+            const occupiedColumns = new Set(layout.slots.map((slot) => slot.x));
+
+            return Array.from({ length: layout.cols }, (_, colIndex) => {
+                return occupiedColumns.has(colIndex)
+                    ? "1fr"
+                    : `${AISLE_RATIO}fr`;
+            }).join(" ");
+        }
+
+        function isLayoutRotated180(layout) {
+            const firstSlot = layout.slots[0];
+            return Boolean(
+                firstSlot &&
+                firstSlot.x === layout.cols - 1 &&
+                firstSlot.y === layout.rows - 1
+            );
+        }
+
+        function getChalkboardPlacement(layout) {
+            const rotated = isLayoutRotated180(layout);
+
+            return {
+                row: rotated ? layout.rows + 1 : 1,
+                seatRowOffset: rotated ? 0 : 1,
+                templateRows: rotated
+                    ? `repeat(${layout.rows}, auto) auto`
+                    : `auto repeat(${layout.rows}, auto)`
+            };
+        }
+
+        function renderBoard() {
+            const detailsVisible = state.showDetails || state.isSettingsOpen;
+            const seatMap = getSeatMap();
+            const chalkboardPlacement = getChalkboardPlacement(state.layout);
+
+            elements.board.innerHTML = "";
+            elements.board.style.gridTemplateColumns = buildColumnTemplate(state.layout);
+            elements.board.style.gridTemplateRows = chalkboardPlacement.templateRows;
+
+            const chalkboard = document.createElement("div");
+            chalkboard.className = "chalkboard";
+            chalkboard.textContent = TEXT.chalkboard;
+            chalkboard.style.gridColumn = "1 / -1";
+            chalkboard.style.gridRow = String(chalkboardPlacement.row);
+            elements.board.appendChild(chalkboard);
+
+            state.layout.slots.forEach((slot, index) => {
+                const seatId = state.seatOrder[index];
+                const seat = seatId ? seatMap.get(seatId) : null;
+                const button = document.createElement("button");
+
+                button.type = "button";
+                button.className = `seat ${getSeatClass(seat)} readonly`;
+                button.style.gridColumn = String(slot.x + 1);
+                button.style.gridRow = String(slot.y + 1 + chalkboardPlacement.seatRowOffset);
+
+                if (detailsVisible) {
+                    const label = document.createElement("div");
+                    const meta = document.createElement("div");
+
+                    label.className = "seat-text";
+                    meta.className = "seat-meta";
+
+                    if (seat) {
+                        label.textContent = seat.seat_id;
+                        meta.textContent = typeof seat.confidence === "number"
+                            ? `${Math.round(seat.confidence * 100)}%`
+                            : TEXT.noInfo;
+                    } else {
+                        label.textContent = TEXT.emptySlot;
+                        meta.textContent = "";
+                    }
+
+                    button.appendChild(label);
+                    button.appendChild(meta);
+                }
+
+                elements.board.appendChild(button);
+            });
+        }
+
+        function renderStats(data) {
+            elements.countEmpty.textContent = data.empty_count ?? 0;
+            elements.countOccupied.textContent = data.occupied_count ?? 0;
+            elements.updateTime.textContent = TEXT.updatePrefix + (data.updated_at ?? TEXT.unknown);
+        }
+
+        function rotateLayout180() {
+            const current = cloneLayout(state.layout);
+            current.slots = current.slots.map((slot) => ({
+                x: current.cols - slot.x - 1,
+                y: current.rows - slot.y - 1
+            }));
+            state.layout = current;
+            saveState();
+            renderBoard();
+        }
+
+        elements.settingsToggle.addEventListener("click", () => {
+            if (!state.isSettingsOpen && !requestSettingsAccess()) {
+                return;
+            }
+
+            if (!state.isSettingsOpen) {
+                state.showDetails = false;
+            }
+
+            state.isSettingsOpen = !state.isSettingsOpen;
+            renderControls();
+            renderBoard();
+        });
+
+        elements.detailsToggle.addEventListener("click", () => {
+            if (state.isSettingsOpen) {
+                state.isSettingsOpen = false;
+                state.showDetails = true;
+            } else {
+                state.showDetails = !state.showDetails;
+            }
+
+            renderControls();
+            renderBoard();
+        });
+
+        elements.rotateLayout.addEventListener("click", rotateLayout180);
+
+        applyStaticText();
+        loadSavedState();
+        renderControls();
+        renderBoard();
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const statusRef = db.ref("studyroom/live_status");
+        layoutRef = db.ref(LAYOUT_PATH);
 
-        // 3. 실시간 데이터 수신 대기 (on 메소드가 핵심입니다)
-        const statusRef = db.ref('studyroom/live_status');
-        
-        statusRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
+        layoutRef.on("value", (snapshot) => {
+            state.hasRemoteLayout = true;
 
-            // 통계 업데이트
-            document.getElementById('count-empty').innerText = data.empty_count;
-            document.getElementById('count-occupied').innerText = data.occupied_count;
-            document.getElementById('update-time').innerText = "마지막 업데이트: " + data.updated_at;
+            if (applySharedLayout(snapshot.val())) {
+                if (syncSeatOrder()) {
+                    saveState();
+                }
+                renderBoard();
+                return;
+            }
 
-            // 좌석 그리드 렌더링
-            const container = document.getElementById('seat-container');
-            container.innerHTML = ''; // 기존 내용 지우기
+            saveState();
+        }, (error) => {
+            console.error("Firebase layout sync error:", error);
+        });
 
-            data.seats.forEach(seat => {
-                const div = document.createElement('div');
-                div.className = `seat ${seat.state}`; // 상태에 따라 클래스(색상) 적용
-                div.innerHTML = `${seat.seat_id}<br><small>${(seat.confidence * 100).toFixed(0)}%</small>`;
-                container.appendChild(div);
-            });
+        statusRef.on("value", (snapshot) => {
+            const data = snapshot.val() || {};
+            state.seats = normalizeSeats(data.seats);
+            state.hasSeatSnapshot = true;
+            if (syncSeatOrder() && state.hasRemoteLayout) {
+                saveState();
+            }
+            renderStats(data);
+            renderBoard();
+        }, (error) => {
+            elements.updateTime.textContent = TEXT.connectionError;
+            console.error("Firebase data error:", error);
         });
     </script>
 </body>
