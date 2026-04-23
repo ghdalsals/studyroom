@@ -3,24 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Care Concierge Seat Status</title>
+    <title>실시간 좌석 현황</title>
     <style>
         :root {
-            --grid-gap: 10px;
-            --page-bg: #FAFBFC;
+            --page-bg: #F8FAFC;
             --board-bg: #FFFFFF;
-            --seat-inactive: #EEF2F6;
-            --seat-border: #DCE3EA;
-            --title-text: #1F2937;
-            --body-text: #475569;
-            --timestamp-text: #94A3B8;
+            --seat-inactive: #E7ECF2;
+            --seat-border: #D6DEE8;
             --available-seat: #4ADE80;
             --occupied-seat: #F87171;
-            --button-bg: #EEF2F6;
-            --button-hover: #E2E8F0;
-            --button-text: #475569;
-            --button-border: #EEF2F6;
-            --soft-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            --uncertain-seat: #FBBF24;
+            --title-text: #1F2937;
+            --body-text: #475569;
+            --timestamp-text: #64748B;
+            --button-bg: #D6DCE3;
+            --button-hover: #C8D0D9;
+            --button-text: #334155;
+            --button-border: #D6DCE3;
+            --soft-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+            --panel-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+            --seat-col-track: minmax(92px, 1fr);
+            --gap-track: 12px;
+            --gap-track-wide: 32px;
+            --row-gap-track-wide: 24px;
         }
 
         * {
@@ -30,9 +35,14 @@
         body {
             margin: 0;
             padding: 20px;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
             background: var(--page-bg);
             color: var(--body-text);
+        }
+
+        button,
+        input {
+            font: inherit;
         }
 
         .page {
@@ -43,8 +53,9 @@
 
         h1 {
             margin: 0 0 18px;
-            font-size: 2rem;
+            font-size: clamp(1.9rem, 3vw, 2.2rem);
             color: var(--title-text);
+            letter-spacing: -0.03em;
         }
 
         .header-layout {
@@ -67,10 +78,10 @@
             min-width: 190px;
             padding: 14px 24px;
             border-radius: 14px;
-            color: white;
+            color: #FFFFFF;
             font-weight: 700;
             box-shadow: var(--soft-shadow);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
         .stat-box.available {
@@ -84,47 +95,82 @@
         .topbar {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            align-items: center;
+            gap: 12px;
             margin: 0;
         }
 
         .topbar .top-button {
-            flex: 0 0 auto;
-            width: 74px;
+            flex: 0 0 96px;
+            width: 96px;
+        }
+
+        .mode-toggle {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: center;
+            width: 168px;
+            padding: 4px;
+            border: 1px solid var(--button-border);
+            border-radius: 16px;
+            background: var(--button-bg);
+            box-shadow: var(--soft-shadow);
+            cursor: pointer;
+        }
+
+        .mode-label {
+            position: relative;
+            z-index: 1;
+            padding: 8px 0;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--button-text);
+            text-align: center;
+            transition: color 0.15s ease;
+        }
+
+        .mode-toggle-thumb {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            border-radius: 12px;
+            background: #FFFFFF;
+            box-shadow: var(--soft-shadow);
+            transition: transform 0.18s ease;
+        }
+
+        .mode-toggle.expert .mode-toggle-thumb {
+            transform: translateX(100%);
+        }
+
+        .mode-toggle:not(.expert) .mode-label.general,
+        .mode-toggle.expert .mode-label.expert {
+            color: var(--title-text);
         }
 
         .top-button {
-            width: 74px;
+            width: 92px;
             border: 1px solid var(--button-border);
-            border-radius: 12px;
-            padding: 8px 0;
-            font-size: 0.88rem;
+            border-radius: 14px;
+            padding: 10px 0;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
             color: var(--button-text);
             background: var(--button-bg);
-            transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+            transition: background-color 0.15s ease, box-shadow 0.15s ease;
             box-shadow: var(--soft-shadow);
-        }
-
-        .top-button.settings {
-            background: var(--button-bg);
-            border-color: var(--button-bg);
-        }
-
-        .top-button.details {
-            background: var(--button-bg);
-            border-color: var(--button-bg);
         }
 
         .top-button:hover {
             background: var(--button-hover);
-            border-color: var(--button-hover);
-            transform: translateY(-1px);
         }
 
         .top-button.active {
-            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.24), var(--soft-shadow);
+            box-shadow: 0 0 0 2px rgba(111, 119, 132, 0.24), var(--soft-shadow);
         }
 
         .settings-panel {
@@ -133,23 +179,25 @@
             padding: 16px;
             border-radius: 18px;
             background: var(--board-bg);
-            box-shadow: var(--soft-shadow);
+            box-shadow: var(--panel-shadow);
             border: 1px solid var(--seat-border);
+            text-align: left;
         }
 
         .settings-panel[hidden] {
             display: none;
         }
 
-        .settings-actions {
+        .settings-toolbar {
             display: flex;
             justify-content: center;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 0;
+            align-items: end;
+            margin-bottom: 14px;
         }
 
-        .settings-actions button {
+        .settings-toolbar button {
             border: 1px solid var(--button-border);
             border-radius: 999px;
             padding: 10px 16px;
@@ -161,30 +209,135 @@
             box-shadow: var(--soft-shadow);
         }
 
-        .settings-actions button:hover {
+        .settings-toolbar button:hover {
             background: var(--button-hover);
-            border-color: var(--button-hover);
         }
 
-        #update-time {
+        .settings-field {
+            display: grid;
+            gap: 6px;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--body-text);
+        }
+
+        .settings-field input {
+            width: 96px;
+            padding: 10px 12px;
+            border: 1px solid var(--seat-border);
+            border-radius: 12px;
+            background: #FFFFFF;
+            color: var(--title-text);
+            font-size: 0.95rem;
+        }
+
+        .settings-editor {
+            display: grid;
+            gap: 12px;
+            justify-items: center;
+        }
+
+        .settings-subtle {
+            font-size: 0.86rem;
             color: var(--timestamp-text);
-            margin-top: 14px;
+            text-align: center;
+        }
+
+        .gap-editor {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--seat-border);
+            border-radius: 16px;
+            background: var(--page-bg);
+            overflow-x: auto;
+        }
+
+        .gap-editor[hidden] {
+            display: none;
+        }
+
+        .editor-grid {
+            display: grid;
+            gap: 8px;
+            justify-content: center;
+            min-width: fit-content;
+        }
+
+        .editor-seat {
+            width: 34px;
+            height: 22px;
+            border: 1px solid var(--seat-border);
+            border-radius: 8px;
+            background: var(--seat-inactive);
+        }
+
+        .gap-toggle {
+            position: relative;
+            border: none;
+            padding: 0;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 999px;
+        }
+
+        .gap-toggle::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 999px;
+            background: var(--seat-border);
+            transition: background-color 0.15s ease, transform 0.15s ease;
+        }
+
+        .gap-toggle.col {
+            width: 18px;
+            height: 22px;
+        }
+
+        .gap-toggle.col::before {
+            width: 6px;
+            height: 18px;
+        }
+
+        .gap-toggle.row {
+            width: 34px;
+            height: 18px;
+        }
+
+        .gap-toggle.row::before {
+            width: 28px;
+            height: 6px;
+        }
+
+        .gap-toggle.active::before {
+            background: var(--button-text);
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+
+        .gap-corner {
+            width: 18px;
+            height: 18px;
         }
 
         .board-wrap {
             overflow: hidden;
-            padding: 14px;
+            padding: 18px;
             background: var(--board-bg);
             border-radius: 18px;
-            box-shadow: var(--soft-shadow);
+            box-shadow: var(--panel-shadow);
             border: 1px solid var(--seat-border);
         }
 
-        #board {
-            display: grid;
-            width: 100%;
-            margin: 0 auto;
-            gap: var(--grid-gap);
+        .board-stage {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .board-stage.is-rotated {
+            flex-direction: column-reverse;
         }
 
         .chalkboard {
@@ -193,11 +346,10 @@
             background: var(--seat-inactive);
             color: var(--body-text);
             width: clamp(180px, 34%, 320px);
-            aspect-ratio: 11 / 1;
+            min-height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
-            justify-self: center;
             align-self: center;
             font-size: 0.82rem;
             font-weight: 700;
@@ -205,13 +357,33 @@
             box-shadow: var(--soft-shadow);
         }
 
-        .seat {
+        .board-scroll {
+            overflow: auto;
+            padding: 6px;
+        }
+
+        .seat-grid {
+            display: grid;
+            justify-content: center;
+            align-content: start;
+            min-width: fit-content;
+            margin: 0 auto;
+            transform: rotate(var(--grid-rotation, 0deg));
+            transform-origin: center;
+            transition: transform 0.2s ease;
+        }
+
+        .seat-grid.is-rotated .seat-card__content {
+            transform: rotate(180deg);
+        }
+
+        .seat-card {
             border: 1px solid var(--seat-border);
             border-radius: 12px;
             width: 100%;
+            aspect-ratio: 3 / 2;
             min-width: 0;
             min-height: 0;
-            aspect-ratio: 3 / 2;
             padding: 8px;
             display: flex;
             flex-direction: column;
@@ -220,31 +392,53 @@
             gap: 5px;
             font-weight: 700;
             box-shadow: var(--soft-shadow);
-            transition: transform 0.15s ease, opacity 0.15s ease;
+            transition: box-shadow 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+            background: var(--seat-inactive);
+            color: var(--title-text);
         }
 
-        .seat.available {
+        .seat-card.readonly {
+            cursor: default;
+        }
+
+        .seat-card.resettable {
+            cursor: pointer;
+        }
+
+        .seat-card.resettable:hover {
+            box-shadow: 0 0 0 3px rgba(111, 119, 132, 0.18), var(--soft-shadow);
+        }
+
+        .seat-card.available {
             background: var(--available-seat);
-            color: var(--title-text);
         }
 
-        .seat.in-use {
+        .seat-card.occupied {
             background: var(--occupied-seat);
-            color: var(--title-text);
         }
 
-        .seat.uncertain {
-            background: #FBBF24;
-            color: var(--title-text);
+        .seat-card.uncertain {
+            background: var(--uncertain-seat);
         }
 
-        .seat.slot-empty {
+        .seat-card.slot-empty {
             background: var(--seat-inactive);
             color: var(--body-text);
         }
 
-        .seat.readonly {
-            cursor: default;
+        .seat-card.selected {
+            box-shadow: 0 0 0 3px rgba(111, 119, 132, 0.2), var(--soft-shadow);
+        }
+
+        .seat-card__content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            width: 100%;
+            height: 100%;
+            text-align: center;
         }
 
         .seat-text {
@@ -255,11 +449,23 @@
         .seat-meta {
             font-size: 0.8rem;
             line-height: 1.1;
+            color: rgba(31, 41, 55, 0.82);
+        }
+
+        .seat-card.slot-empty .seat-meta {
+            color: var(--timestamp-text);
+        }
+
+        #update-time {
+            margin-top: 14px;
+            color: var(--timestamp-text);
         }
 
         @media (max-width: 720px) {
             :root {
-                --grid-gap: 8px;
+                --seat-col-track: minmax(78px, 1fr);
+                --gap-track-wide: 24px;
+                --row-gap-track-wide: 18px;
             }
 
             body {
@@ -270,11 +476,8 @@
                 min-width: 150px;
             }
 
-            .topbar .top-button,
             .top-button {
-                width: 68px;
-                font-size: 0.84rem;
-                padding: 7px 0;
+                width: 84px;
             }
         }
 
@@ -288,115 +491,142 @@
             }
 
             .topbar {
-                gap: 8px;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .settings-panel {
+                padding: 14px;
+            }
+
+            .board-wrap {
+                padding: 14px;
+            }
+
+            .seat-text {
+                font-size: 0.84rem;
+            }
+
+            .seat-meta {
+                font-size: 0.72rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="page">
-        <h1 id="page-title"></h1>
+        <h1 id="page-title">실시간 좌석 현황</h1>
 
         <div class="header-layout">
             <div class="dashboard">
-                <div class="stat-box available">
-                    <span id="available-label"></span>: <span id="count-empty">0</span>
-                </div>
-                <div class="stat-box occupied">
-                    <span id="occupied-label"></span>: <span id="count-occupied">0</span>
-                </div>
+                <div class="stat-box available"><span id="available-label">사용 가능</span>: <span id="count-empty">0</span></div>
+                <div class="stat-box occupied"><span id="occupied-label">사용 중</span>: <span id="count-occupied">0</span></div>
             </div>
 
             <div class="topbar">
-                <button id="settings-toggle" class="top-button settings" type="button"></button>
-                <button id="details-toggle" class="top-button details" type="button"></button>
+                <button id="settings-toggle" class="top-button" type="button" aria-expanded="false">설정</button>
+                <button id="mode-toggle" class="mode-toggle" type="button" role="switch" aria-checked="false">
+                    <span id="mode-general" class="mode-label general">일반</span>
+                    <span id="mode-expert" class="mode-label expert">전문가</span>
+                    <span class="mode-toggle-thumb"></span>
+                </button>
             </div>
         </div>
 
         <section id="settings-panel" class="settings-panel" hidden>
-            <div class="settings-actions">
-                <button id="rotate-layout" type="button"></button>
+            <div class="settings-toolbar">
+                <label class="settings-field">
+                    <span id="rows-label">행 수</span>
+                    <input id="rows-input" type="number" min="1" max="20" inputmode="numeric">
+                </label>
+                <label class="settings-field">
+                    <span id="cols-label">열 수</span>
+                    <input id="cols-input" type="number" min="1" max="20" inputmode="numeric">
+                </label>
+                <button id="apply-dimensions" type="button">행/열 적용</button>
+                <button id="reset-seats" type="button">좌석 재설정</button>
+                <button id="rotate-layout" type="button">180도 회전</button>
+            </div>
+
+            <div class="settings-editor">
+                <div id="settings-note" class="settings-subtle">책상 사이를 클릭하면 간격이 생기거나 사라집니다.</div>
+                <div id="gap-editor" class="gap-editor"></div>
             </div>
         </section>
 
         <div class="board-wrap">
-            <div id="board"></div>
+            <div id="board-stage" class="board-stage">
+                <div class="chalkboard">칠판</div>
+                <div class="board-scroll">
+                    <div id="seat-grid" class="seat-grid"></div>
+                </div>
+            </div>
         </div>
 
-        <div id="update-time"></div>
+        <div id="update-time">마지막 업데이트: 대기 중</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
     <script>
         const TEXT = {
             pageTitle: "실시간 좌석 현황",
             available: "사용 가능",
             occupied: "사용 중",
             settings: "설정",
-            details: "상세",
+            general: "일반",
+            expert: "전문가",
+            rows: "행 수",
+            cols: "열 수",
+            applyDimensions: "행/열 적용",
+            resetSeats: "좌석 재설정",
+            finishReset: "재설정 완료",
             rotateLayout: "180도 회전",
-            chalkboard: "칠판",
-            pinPrompt: "설정을 열려면 관리자 PIN을 입력하세요.",
-            pinWrong: "PIN이 일치하지 않아 설정을 열 수 없습니다.",
-            updateWaiting: "마지막 업데이트: 대기 중...",
-            updatePrefix: "마지막 업데이트: ",
-            unknown: "확인 불가",
-            connectionError: "마지막 업데이트: 연결 오류",
+            gapEditor: "책상 사이를 클릭하면 간격이 생기거나 사라집니다.",
+            resetHelp: "슬롯을 클릭한 순서대로 seat_1, seat_2, seat_3 ... 이 배치됩니다.",
             emptySlot: "빈 슬롯",
-            noInfo: "정보 없음"
+            noInfo: "confidence -",
+            updatedPrefix: "마지막 업데이트: ",
+            waitingUpdate: "마지막 업데이트: 대기 중",
+            connectionError: "마지막 업데이트: 연결 오류",
+            clickToAssign: "클릭해서 배치",
+            clickToRemove: "클릭하면 해제"
         };
 
         const firebaseConfig = {
             databaseURL: "https://studyroom-a6399-default-rtdb.firebaseio.com/"
         };
 
-        const STORAGE_KEY = "care-concierge-classroom-layout-v5";
-        const LAYOUT_PATH = "studyroom/layout_config";
-        const SETTINGS_PIN = "2468"; // 실제 배포 전 변경 권장
-        const AISLE_RATIO = 0.5;
-        const GROUPS = [1, 2, 2, 2, 2];
+        const LIVE_STATUS_PATH = "studyroom/live_status";
+        const LAYOUT_CONFIG_PATH = "studyroom/layout_config";
+        const STORAGE_KEY = "studyroom.classroom.layout.v1";
+        const DEFAULT_LAYOUT_SETTINGS = {
+            seatRows: 5,
+            seatCols: 6,
+            colGaps: [],
+            rowGaps: [],
+            rotation180: false
+        };
 
-        function buildBaseLayout() {
-            const slots = [];
-            let totalColumns = 0;
-
-            GROUPS.forEach((groupWidth, index) => {
-                totalColumns += groupWidth;
-                if (index < GROUPS.length - 1) {
-                    totalColumns += 1;
-                }
-            });
-
-            for (let row = 0; row < 5; row += 1) {
-                let x = 0;
-
-                GROUPS.forEach((groupWidth, groupIndex) => {
-                    for (let seatOffset = 0; seatOffset < groupWidth; seatOffset += 1) {
-                        slots.push({ x: x + seatOffset, y: row });
-                    }
-
-                    x += groupWidth;
-                    if (groupIndex < GROUPS.length - 1) {
-                        x += 1;
-                    }
-                });
-            }
-
-            return { cols: totalColumns, rows: 5, slots };
-        }
-
-        const BASE_LAYOUT = buildBaseLayout();
+        const collator = new Intl.Collator("ko-KR", { numeric: true, sensitivity: "base" });
 
         const state = {
-            seats: [],
-            seatOrder: [],
-            layout: cloneLayout(BASE_LAYOUT),
-            isSettingsOpen: false,
-            showDetails: false,
-            hasSeatSnapshot: false,
-            hasRemoteLayout: false
+            expertMode: false,
+            settingsOpen: false,
+            resetMode: false,
+            resetSelection: [],
+            layoutSettings: normalizeLayoutSettings(DEFAULT_LAYOUT_SETTINGS),
+            seatOrder: buildDefaultSeatOrder(getSlotCount(DEFAULT_LAYOUT_SETTINGS)),
+            layoutUpdatedAt: 0,
+            visualRotationDeg: 0,
+            visualRotation180: false,
+            liveStatus: {
+                emptyCount: 0,
+                occupiedCount: 0,
+                updatedAt: "",
+                seatsById: {}
+            },
+            firebaseReady: false
         };
 
         let layoutRef = null;
@@ -407,186 +637,143 @@
             occupiedLabel: document.getElementById("occupied-label"),
             countEmpty: document.getElementById("count-empty"),
             countOccupied: document.getElementById("count-occupied"),
-            board: document.getElementById("board"),
-            updateTime: document.getElementById("update-time"),
             settingsToggle: document.getElementById("settings-toggle"),
-            detailsToggle: document.getElementById("details-toggle"),
+            modeToggle: document.getElementById("mode-toggle"),
+            modeGeneral: document.getElementById("mode-general"),
+            modeExpert: document.getElementById("mode-expert"),
             settingsPanel: document.getElementById("settings-panel"),
-            rotateLayout: document.getElementById("rotate-layout")
+            rowsLabel: document.getElementById("rows-label"),
+            colsLabel: document.getElementById("cols-label"),
+            rowsInput: document.getElementById("rows-input"),
+            colsInput: document.getElementById("cols-input"),
+            applyDimensions: document.getElementById("apply-dimensions"),
+            resetSeats: document.getElementById("reset-seats"),
+            rotateLayout: document.getElementById("rotate-layout"),
+            settingsNote: document.getElementById("settings-note"),
+            gapEditor: document.getElementById("gap-editor"),
+            boardStage: document.getElementById("board-stage"),
+            seatGrid: document.getElementById("seat-grid"),
+            updateTime: document.getElementById("update-time")
         };
 
-        function applyStaticText() {
-            document.title = TEXT.pageTitle;
-            elements.pageTitle.textContent = TEXT.pageTitle;
-            elements.availableLabel.textContent = TEXT.available;
-            elements.occupiedLabel.textContent = TEXT.occupied;
-            elements.settingsToggle.textContent = TEXT.settings;
-            elements.detailsToggle.textContent = TEXT.details;
-            elements.rotateLayout.textContent = TEXT.rotateLayout;
-            elements.updateTime.textContent = TEXT.updateWaiting;
+        function getSlotCount(layoutSettings = state.layoutSettings) {
+            return layoutSettings.seatRows * layoutSettings.seatCols;
         }
 
-        function cloneLayout(layout) {
+        function buildDefaultSeatOrder(slotCount) {
+            return Array.from({ length: slotCount }, (_, index) => "seat_" + (index + 1));
+        }
+
+        function safeParse(value, fallback) {
+            if (!value) {
+                return fallback;
+            }
+
+            try {
+                return JSON.parse(value);
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        function parseTimestamp(value) {
+            if (typeof value === "number" && Number.isFinite(value)) {
+                return value;
+            }
+
+            if (typeof value === "string" && value.trim()) {
+                const parsed = Date.parse(value);
+                return Number.isNaN(parsed) ? 0 : parsed;
+            }
+
+            return 0;
+        }
+
+        function normalizeInt(value, fallback, min = 1, max = 20) {
+            const parsed = Number.parseInt(value, 10);
+            if (!Number.isInteger(parsed)) {
+                return fallback;
+            }
+            return Math.min(max, Math.max(min, parsed));
+        }
+
+        function normalizeGapList(raw, gapCount) {
+            const source = Array.isArray(raw)
+                ? raw
+                : raw && typeof raw === "object"
+                    ? Object.values(raw)
+                    : [];
+
+            return Array.from(new Set(source
+                .map((value) => Number(value))
+                .filter((value) => Number.isInteger(value) && value >= 0 && value < gapCount)))
+                .sort((left, right) => left - right);
+        }
+
+        function normalizeLayoutSettings(raw) {
+            const seatRows = normalizeInt(raw && raw.seatRows, DEFAULT_LAYOUT_SETTINGS.seatRows);
+            const seatCols = normalizeInt(raw && raw.seatCols, DEFAULT_LAYOUT_SETTINGS.seatCols);
+
             return {
-                cols: layout.cols,
-                rows: layout.rows,
-                slots: layout.slots.map((slot) => ({ ...slot }))
+                seatRows,
+                seatCols,
+                colGaps: normalizeGapList(raw && raw.colGaps, Math.max(0, seatCols - 1)),
+                rowGaps: normalizeGapList(raw && raw.rowGaps, Math.max(0, seatRows - 1)),
+                rotation180: Boolean(raw && raw.rotation180)
             };
         }
 
-        function isValidLayout(layout) {
-            return Boolean(
-                layout &&
-                Number.isInteger(layout.cols) &&
-                Number.isInteger(layout.rows) &&
-                Array.isArray(layout.slots) &&
-                layout.slots.length === BASE_LAYOUT.slots.length
-            );
-        }
+        function normalizeSeatOrder(raw, slotCount, fallbackOrder) {
+            const next = Array(slotCount).fill(null);
 
-        function normalizeSeatOrder(order) {
-            const next = Array(BASE_LAYOUT.slots.length).fill(null);
-
-            if (!Array.isArray(order)) {
+            if (Array.isArray(raw)) {
+                raw.slice(0, slotCount).forEach((seatId, index) => {
+                    next[index] = typeof seatId === "string" && seatId.trim() ? seatId.trim() : null;
+                });
                 return next;
             }
 
-            order.slice(0, next.length).forEach((seatId, index) => {
-                next[index] = typeof seatId === "string" && seatId ? seatId : null;
-            });
+            if (raw && typeof raw === "object") {
+                Object.entries(raw).forEach(([rawIndex, seatId]) => {
+                    const index = Number.parseInt(rawIndex, 10);
+                    if (!Number.isInteger(index) || index < 0 || index >= slotCount) {
+                        return;
+                    }
+                    next[index] = typeof seatId === "string" && seatId.trim() ? seatId.trim() : null;
+                });
+                return next;
+            }
+
+            if (fallbackOrder !== undefined) {
+                return normalizeSeatOrder(fallbackOrder, slotCount);
+            }
 
             return next;
         }
 
-        function compareSeatIds(left, right) {
-            return left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" });
-        }
+        function serializeSeatOrder(order) {
+            const serialized = {};
 
-        function loadSavedState() {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return;
-
-                const saved = JSON.parse(raw);
-                state.layout = isValidLayout(saved.layout) ? cloneLayout(saved.layout) : cloneLayout(BASE_LAYOUT);
-                state.seatOrder = normalizeSeatOrder(saved.seatOrder);
-            } catch (error) {
-                state.layout = cloneLayout(BASE_LAYOUT);
-                state.seatOrder = normalizeSeatOrder([]);
-            }
-        }
-
-        function cacheState() {
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify({
-                    layout: state.layout,
-                    seatOrder: state.seatOrder
-                })
-            );
-        }
-
-        function applySharedLayout(data) {
-            if (!data || !isValidLayout(data.layout)) {
-                return false;
-            }
-
-            state.layout = cloneLayout(data.layout);
-            state.seatOrder = normalizeSeatOrder(data.seatOrder);
-            cacheState();
-            return true;
-        }
-
-        function saveState() {
-            cacheState();
-
-            if (!layoutRef) return;
-
-            layoutRef.set({
-                layout: state.layout,
-                seatOrder: state.seatOrder,
-                updated_at: new Date().toISOString()
-            }).catch((error) => {
-                console.error("Firebase layout save error:", error);
-                window.alert("레이아웃 저장 중 오류가 발생했습니다.");
-            });
-        }
-
-        function normalizeSeats(rawSeats) {
-            const seats = Array.isArray(rawSeats) ? rawSeats : Object.values(rawSeats || {});
-
-            return seats
-                .filter(Boolean)
-                .map((seat, index) => ({
-                    ...seat,
-                    seat_id: String(seat.seat_id ?? `Seat-${index + 1}`)
-                }));
-        }
-
-        function syncSeatOrder() {
-            if (!state.hasSeatSnapshot) {
-                return false;
-            }
-
-            const before = JSON.stringify(state.seatOrder);
-            const liveIds = state.seats.map((seat) => seat.seat_id).sort(compareSeatIds);
-            const liveSet = new Set(liveIds);
-            const kept = state.seatOrder.filter((seatId) => seatId && liveSet.has(seatId));
-            const seen = new Set(kept);
-
-            liveIds.forEach((seatId) => {
-                if (!seen.has(seatId) && kept.length < BASE_LAYOUT.slots.length) {
-                    kept.push(seatId);
-                    seen.add(seatId);
+            normalizeSeatOrder(order, order.length).forEach((seatId, index) => {
+                if (seatId) {
+                    serialized[index] = seatId;
                 }
             });
 
-            state.seatOrder = normalizeSeatOrder(kept);
-            return before !== JSON.stringify(state.seatOrder);
+            return serialized;
         }
 
-        function getSeatMap() {
-            return new Map(state.seats.map((seat) => [seat.seat_id, seat]));
+        function isValidLegacyLayout(layout) {
+            return Boolean(
+                layout &&
+                Number.isInteger(layout.cols) &&
+                Number.isInteger(layout.rows) &&
+                Array.isArray(layout.slots)
+            );
         }
 
-        function getSeatClass(seat) {
-            if (!seat) return "slot-empty";
-            if (seat.state === "empty") return "available";
-            if (seat.state === "occupied") return "in-use";
-            return "uncertain";
-        }
-
-        function requestSettingsAccess() {
-            const enteredPin = window.prompt(TEXT.pinPrompt, "");
-
-            if (enteredPin === null) {
-                return false;
-            }
-
-            if (enteredPin !== SETTINGS_PIN) {
-                window.alert(TEXT.pinWrong);
-                return false;
-            }
-
-            return true;
-        }
-
-        function renderControls() {
-            elements.settingsPanel.hidden = !state.isSettingsOpen;
-            elements.settingsToggle.classList.toggle("active", state.isSettingsOpen);
-            elements.detailsToggle.classList.toggle("active", state.showDetails);
-        }
-
-        function buildColumnTemplate(layout) {
-            const occupiedColumns = new Set(layout.slots.map((slot) => slot.x));
-
-            return Array.from({ length: layout.cols }, (_, colIndex) => {
-                return occupiedColumns.has(colIndex) ? "1fr" : `${AISLE_RATIO}fr`;
-            }).join(" ");
-        }
-
-        function isLayoutRotated180(layout) {
-            const firstSlot = layout.slots[0];
+        function isLegacyLayoutRotated180(layout) {
+            const firstSlot = layout && layout.slots && layout.slots[0];
             return Boolean(
                 firstSlot &&
                 firstSlot.x === layout.cols - 1 &&
@@ -594,156 +781,601 @@
             );
         }
 
-        // 요청 반영: 기본 상태에서는 칠판이 아래, 180도 회전 시 위
-        function getChalkboardPlacement(layout) {
-            const rotated = isLayoutRotated180(layout);
+        function layoutSettingsFromLegacyLayout(layout) {
+            if (!isValidLegacyLayout(layout)) {
+                return normalizeLayoutSettings(DEFAULT_LAYOUT_SETTINGS);
+            }
 
-            return {
-                row: rotated ? 1 : layout.rows + 1,
-                seatRowOffset: rotated ? 1 : 0,
-                templateRows: rotated
-                    ? `auto repeat(${layout.rows}, auto)`
-                    : `repeat(${layout.rows}, auto) auto`
-            };
-        }
+            const xPositions = Array.from(new Set(layout.slots.map((slot) => slot.x))).sort((left, right) => left - right);
+            const yPositions = Array.from(new Set(layout.slots.map((slot) => slot.y))).sort((left, right) => left - right);
+            const colGaps = [];
+            const rowGaps = [];
 
-        function renderBoard() {
-            const detailsVisible = state.showDetails || state.isSettingsOpen;
-            const seatMap = getSeatMap();
-            const chalkboardPlacement = getChalkboardPlacement(state.layout);
-
-            elements.board.innerHTML = "";
-            elements.board.style.gridTemplateColumns = buildColumnTemplate(state.layout);
-            elements.board.style.gridTemplateRows = chalkboardPlacement.templateRows;
-
-            const chalkboard = document.createElement("div");
-            chalkboard.className = "chalkboard";
-            chalkboard.textContent = TEXT.chalkboard;
-            chalkboard.style.gridColumn = "1 / -1";
-            chalkboard.style.gridRow = String(chalkboardPlacement.row);
-            elements.board.appendChild(chalkboard);
-
-            state.layout.slots.forEach((slot, index) => {
-                const seatId = state.seatOrder[index];
-                const seat = seatId ? seatMap.get(seatId) : null;
-                const button = document.createElement("button");
-
-                button.type = "button";
-                button.className = `seat ${getSeatClass(seat)} readonly`;
-                button.style.gridColumn = String(slot.x + 1);
-                button.style.gridRow = String(slot.y + 1 + chalkboardPlacement.seatRowOffset);
-
-                if (detailsVisible) {
-                    const label = document.createElement("div");
-                    const meta = document.createElement("div");
-
-                    label.className = "seat-text";
-                    meta.className = "seat-meta";
-
-                    if (seat) {
-                        label.textContent = seat.seat_id;
-                        meta.textContent = typeof seat.confidence === "number"
-                            ? `${Math.round(seat.confidence * 100)}%`
-                            : TEXT.noInfo;
-                    } else {
-                        label.textContent = TEXT.emptySlot;
-                        meta.textContent = "";
-                    }
-
-                    button.appendChild(label);
-                    button.appendChild(meta);
+            for (let index = 0; index < xPositions.length - 1; index += 1) {
+                if (xPositions[index + 1] - xPositions[index] > 1) {
+                    colGaps.push(index);
                 }
+            }
 
-                elements.board.appendChild(button);
+            for (let index = 0; index < yPositions.length - 1; index += 1) {
+                if (yPositions[index + 1] - yPositions[index] > 1) {
+                    rowGaps.push(index);
+                }
+            }
+
+            return normalizeLayoutSettings({
+                seatRows: yPositions.length || DEFAULT_LAYOUT_SETTINGS.seatRows,
+                seatCols: xPositions.length || DEFAULT_LAYOUT_SETTINGS.seatCols,
+                colGaps,
+                rowGaps,
+                rotation180: isLegacyLayoutRotated180(layout)
             });
         }
 
-        function renderStats(data) {
-            elements.countEmpty.textContent = data.empty_count ?? 0;
-            elements.countOccupied.textContent = data.occupied_count ?? 0;
-            elements.updateTime.textContent = TEXT.updatePrefix + (data.updated_at ?? TEXT.unknown);
+        function getLayoutSettingsFromPayload(payload) {
+            if (payload && payload.layoutSettings) {
+                return normalizeLayoutSettings(payload.layoutSettings);
+            }
+
+            if (payload && isValidLegacyLayout(payload.layout)) {
+                return layoutSettingsFromLegacyLayout(payload.layout);
+            }
+
+            return null;
         }
 
-        function rotateLayout180() {
-            const current = cloneLayout(state.layout);
-            current.slots = current.slots.map((slot) => ({
-                x: current.cols - slot.x - 1,
-                y: current.rows - slot.y - 1
+        function cacheLayoutState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                layoutSettings: state.layoutSettings,
+                seatOrder: state.seatOrder,
+                layoutUpdatedAt: state.layoutUpdatedAt
             }));
-            state.layout = current;
-            saveState();
+        }
+
+        function loadSavedLayout() {
+            const saved = safeParse(localStorage.getItem(STORAGE_KEY), null);
+
+            if (!saved || typeof saved !== "object") {
+                state.layoutSettings = normalizeLayoutSettings(DEFAULT_LAYOUT_SETTINGS);
+                state.seatOrder = buildDefaultSeatOrder(getSlotCount(state.layoutSettings));
+                state.layoutUpdatedAt = 0;
+                syncVisualRotation(true);
+                return;
+            }
+
+            const layoutSettings = getLayoutSettingsFromPayload(saved) || normalizeLayoutSettings(DEFAULT_LAYOUT_SETTINGS);
+            const slotCount = getSlotCount(layoutSettings);
+
+            state.layoutSettings = layoutSettings;
+            state.seatOrder = normalizeSeatOrder(saved.seatOrder, slotCount, buildDefaultSeatOrder(slotCount));
+            state.layoutUpdatedAt = parseTimestamp(saved.layoutUpdatedAt || saved.updated_at);
+            syncVisualRotation(true);
+        }
+
+        function formatUpdatedAt(value) {
+            if (!value) {
+                return TEXT.updatedPrefix + "대기 중";
+            }
+
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) {
+                return TEXT.updatedPrefix + parsed.toLocaleString("ko-KR");
+            }
+
+            return TEXT.updatedPrefix + String(value);
+        }
+
+        function normalizeSeatState(value) {
+            const normalized = String(value || "").trim().toLowerCase();
+
+            if (["empty", "available", "vacant", "idle"].includes(normalized)) {
+                return "empty";
+            }
+
+            if (["occupied", "using", "busy", "in_use"].includes(normalized)) {
+                return "occupied";
+            }
+
+            return "uncertain";
+        }
+
+        function normalizeConfidence(value) {
+            const parsed = Number(value);
+            if (!Number.isFinite(parsed)) {
+                return null;
+            }
+
+            if (parsed <= 1) {
+                return Math.round(Math.max(0, parsed) * 100);
+            }
+
+            return Math.max(0, Math.min(100, Math.round(parsed)));
+        }
+
+        function normalizeLiveSeats(rawSeats) {
+            const source = Array.isArray(rawSeats)
+                ? rawSeats
+                : rawSeats && typeof rawSeats === "object"
+                    ? Object.values(rawSeats)
+                    : [];
+
+            return source
+                .filter(Boolean)
+                .map((seat) => ({
+                    seat_id: String(seat.seat_id || "").trim(),
+                    state: normalizeSeatState(seat.state),
+                    confidence: normalizeConfidence(seat.confidence)
+                }))
+                .filter((seat) => seat.seat_id)
+                .sort((left, right) => collator.compare(left.seat_id, right.seat_id));
+        }
+
+        function buildPreviewSeatOrder() {
+            const next = Array(getSlotCount()).fill(null);
+
+            state.resetSelection.forEach((slotIndex, orderIndex) => {
+                if (slotIndex >= 0 && slotIndex < next.length) {
+                    next[slotIndex] = "seat_" + (orderIndex + 1);
+                }
+            });
+
+            return next;
+        }
+
+        function shouldShowDetails() {
+            return state.expertMode || state.settingsOpen || state.resetMode;
+        }
+
+        function getSeatOrderForRender() {
+            return state.resetMode ? buildPreviewSeatOrder() : state.seatOrder;
+        }
+
+        function getSeatInfo(seatId) {
+            return seatId ? state.liveStatus.seatsById[seatId] || null : null;
+        }
+
+        function getSeatClass(seatId, seatInfo) {
+            if (!seatId) {
+                return "slot-empty";
+            }
+
+            if (!seatInfo) {
+                return "slot-empty";
+            }
+
+            if (seatInfo.state === "empty") {
+                return "available";
+            }
+
+            if (seatInfo.state === "occupied") {
+                return "occupied";
+            }
+
+            return "uncertain";
+        }
+
+        function formatConfidence(confidence) {
+            if (confidence == null) {
+                return TEXT.noInfo;
+            }
+
+            return "confidence " + confidence + "%";
+        }
+
+        function mapGapIndex(kind, index) {
+            if (!state.layoutSettings.rotation180) {
+                return index;
+            }
+
+            const maxIndex = kind === "col"
+                ? state.layoutSettings.seatCols - 2
+                : state.layoutSettings.seatRows - 2;
+
+            return Math.max(0, maxIndex - index);
+        }
+
+        function buildGridTemplate(kind) {
+            const seatCount = kind === "col" ? state.layoutSettings.seatCols : state.layoutSettings.seatRows;
+            const gapSet = new Set(kind === "col" ? state.layoutSettings.colGaps : state.layoutSettings.rowGaps);
+            const seatTrack = kind === "col" ? "var(--seat-col-track)" : "auto";
+            const tightGapTrack = "var(--gap-track)";
+            const wideGapTrack = kind === "col" ? "var(--gap-track-wide)" : "var(--row-gap-track-wide)";
+            const tracks = [];
+
+            for (let index = 0; index < seatCount; index += 1) {
+                tracks.push(seatTrack);
+
+                if (index < seatCount - 1) {
+                    tracks.push(gapSet.has(index) ? wideGapTrack : tightGapTrack);
+                }
+            }
+
+            return tracks.join(" ");
+        }
+
+        function renderStaticText() {
+            document.title = TEXT.pageTitle;
+            elements.pageTitle.textContent = TEXT.pageTitle;
+            elements.availableLabel.textContent = TEXT.available;
+            elements.occupiedLabel.textContent = TEXT.occupied;
+            elements.settingsToggle.textContent = TEXT.settings;
+            elements.modeGeneral.textContent = TEXT.general;
+            elements.modeExpert.textContent = TEXT.expert;
+            elements.rowsLabel.textContent = TEXT.rows;
+            elements.colsLabel.textContent = TEXT.cols;
+            elements.applyDimensions.textContent = TEXT.applyDimensions;
+            elements.rotateLayout.textContent = TEXT.rotateLayout;
+        }
+
+        function renderControls() {
+            elements.settingsPanel.hidden = !state.settingsOpen;
+            elements.settingsToggle.classList.toggle("active", state.settingsOpen);
+            elements.settingsToggle.setAttribute("aria-expanded", String(state.settingsOpen));
+            elements.modeToggle.classList.toggle("expert", state.expertMode);
+            elements.modeToggle.setAttribute("aria-checked", String(state.expertMode));
+            elements.rowsInput.value = String(state.layoutSettings.seatRows);
+            elements.colsInput.value = String(state.layoutSettings.seatCols);
+            elements.resetSeats.textContent = state.resetMode ? TEXT.finishReset : TEXT.resetSeats;
+            elements.settingsNote.textContent = state.resetMode ? TEXT.resetHelp : TEXT.gapEditor;
+            elements.gapEditor.hidden = state.resetMode;
+        }
+
+        function renderStats() {
+            elements.countEmpty.textContent = String(state.liveStatus.emptyCount);
+            elements.countOccupied.textContent = String(state.liveStatus.occupiedCount);
+            elements.updateTime.textContent = formatUpdatedAt(state.liveStatus.updatedAt);
+        }
+
+        function renderBoard() {
+            const seatOrder = getSeatOrderForRender();
+            const showDetails = shouldShowDetails();
+            const slotCount = getSlotCount();
+
+            syncVisualRotation();
+            elements.boardStage.classList.toggle("is-rotated", state.layoutSettings.rotation180);
+            elements.seatGrid.classList.toggle("is-rotated", state.layoutSettings.rotation180);
+            elements.seatGrid.style.setProperty("--grid-rotation", state.visualRotationDeg + "deg");
+            elements.seatGrid.style.gridTemplateColumns = buildGridTemplate("col");
+            elements.seatGrid.style.gridTemplateRows = buildGridTemplate("row");
+            elements.seatGrid.innerHTML = "";
+
+            for (let slotIndex = 0; slotIndex < slotCount; slotIndex += 1) {
+                const rowIndex = Math.floor(slotIndex / state.layoutSettings.seatCols);
+                const colIndex = slotIndex % state.layoutSettings.seatCols;
+                const seatId = seatOrder[slotIndex];
+                const seatInfo = getSeatInfo(seatId);
+                const card = document.createElement("button");
+                const content = document.createElement("div");
+                const label = document.createElement("div");
+                const meta = document.createElement("div");
+
+                card.type = "button";
+                card.className = "seat-card " + getSeatClass(seatId, seatInfo);
+                card.style.gridRow = String(rowIndex * 2 + 1);
+                card.style.gridColumn = String(colIndex * 2 + 1);
+
+                content.className = "seat-card__content";
+                label.className = "seat-text";
+                meta.className = "seat-meta";
+
+                if (state.resetMode) {
+                    card.classList.add("resettable");
+                    if (seatId) {
+                        card.classList.add("selected");
+                    }
+                    label.textContent = seatId || TEXT.emptySlot;
+                    meta.textContent = seatId ? TEXT.clickToRemove : TEXT.clickToAssign;
+                    card.addEventListener("click", () => toggleResetSlot(slotIndex));
+                } else {
+                    card.classList.add("readonly");
+                    if (showDetails) {
+                        label.textContent = seatId || TEXT.emptySlot;
+                        meta.textContent = seatId ? formatConfidence(seatInfo && seatInfo.confidence) : "";
+                    }
+                }
+
+                if (showDetails || state.resetMode) {
+                    content.appendChild(label);
+                    content.appendChild(meta);
+                    card.appendChild(content);
+                }
+
+                elements.seatGrid.appendChild(card);
+            }
+        }
+
+        function renderGapEditor() {
+            if (!state.settingsOpen || state.resetMode) {
+                elements.gapEditor.innerHTML = "";
+                return;
+            }
+
+            const totalRows = state.layoutSettings.seatRows * 2 - 1;
+            const totalCols = state.layoutSettings.seatCols * 2 - 1;
+            const rowGapSet = new Set(state.layoutSettings.rowGaps.map((index) => mapGapIndex("row", index)));
+            const colGapSet = new Set(state.layoutSettings.colGaps.map((index) => mapGapIndex("col", index)));
+            const grid = document.createElement("div");
+
+            elements.gapEditor.innerHTML = "";
+            grid.className = "editor-grid";
+            grid.style.gridTemplateColumns = "repeat(" + totalCols + ", auto)";
+            grid.style.gridTemplateRows = "repeat(" + totalRows + ", auto)";
+
+            for (let row = 0; row < totalRows; row += 1) {
+                for (let col = 0; col < totalCols; col += 1) {
+                    let cell;
+
+                    if (row % 2 === 0 && col % 2 === 0) {
+                        cell = document.createElement("div");
+                        cell.className = "editor-seat";
+                    } else if (row % 2 === 0 && col % 2 === 1) {
+                        const displayGapIndex = Math.floor(col / 2);
+                        cell = document.createElement("button");
+                        cell.type = "button";
+                        cell.className = "gap-toggle col" + (colGapSet.has(displayGapIndex) ? " active" : "");
+                        cell.addEventListener("click", () => toggleGap("col", displayGapIndex));
+                    } else if (row % 2 === 1 && col % 2 === 0) {
+                        const displayGapIndex = Math.floor(row / 2);
+                        cell = document.createElement("button");
+                        cell.type = "button";
+                        cell.className = "gap-toggle row" + (rowGapSet.has(displayGapIndex) ? " active" : "");
+                        cell.addEventListener("click", () => toggleGap("row", displayGapIndex));
+                    } else {
+                        cell = document.createElement("div");
+                        cell.className = "gap-corner";
+                    }
+
+                    grid.appendChild(cell);
+                }
+            }
+
+            elements.gapEditor.appendChild(grid);
+        }
+
+        function render() {
+            renderControls();
+            renderStats();
+            renderBoard();
+            renderGapEditor();
+        }
+
+        function applyLiveStatusSnapshot(rawValue) {
+            const seats = normalizeLiveSeats(rawValue && rawValue.seats);
+            const seatsById = {};
+
+            seats.forEach((seat) => {
+                seatsById[seat.seat_id] = seat;
+            });
+
+            state.liveStatus = {
+                seatsById,
+                emptyCount: Number.isFinite(Number(rawValue && rawValue.empty_count))
+                    ? Number(rawValue.empty_count)
+                    : seats.filter((seat) => seat.state === "empty").length,
+                occupiedCount: Number.isFinite(Number(rawValue && rawValue.occupied_count))
+                    ? Number(rawValue.occupied_count)
+                    : seats.filter((seat) => seat.state === "occupied").length,
+                updatedAt: rawValue && rawValue.updated_at ? rawValue.updated_at : ""
+            };
+
+            renderStats();
             renderBoard();
         }
 
-        elements.settingsToggle.addEventListener("click", () => {
-            if (!state.isSettingsOpen && !requestSettingsAccess()) {
+        function shouldApplyRemoteLayout(remoteUpdatedAt) {
+            if (!remoteUpdatedAt && state.layoutUpdatedAt) {
+                return false;
+            }
+
+            if (remoteUpdatedAt && state.layoutUpdatedAt && remoteUpdatedAt < state.layoutUpdatedAt) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function syncVisualRotation(immediate = false) {
+            const targetRotation180 = state.layoutSettings.rotation180;
+
+            if (immediate) {
+                state.visualRotation180 = targetRotation180;
+                state.visualRotationDeg = targetRotation180 ? 180 : 0;
                 return;
             }
 
-            if (!state.isSettingsOpen) {
-                state.showDetails = false;
+            if (state.visualRotation180 !== targetRotation180) {
+                state.visualRotation180 = targetRotation180;
+                state.visualRotationDeg += 180;
+            }
+        }
+
+        function applyLayoutSnapshot(rawValue) {
+            if (!rawValue || state.resetMode) {
+                return;
             }
 
-            state.isSettingsOpen = !state.isSettingsOpen;
-            renderControls();
-            renderBoard();
-        });
+            const layoutSettings = getLayoutSettingsFromPayload(rawValue);
 
-        elements.detailsToggle.addEventListener("click", () => {
-            if (state.isSettingsOpen) {
-                state.isSettingsOpen = false;
-                state.showDetails = true;
+            if (!layoutSettings) {
+                return;
+            }
+
+            const remoteUpdatedAt = parseTimestamp(rawValue.updated_at);
+
+            if (!shouldApplyRemoteLayout(remoteUpdatedAt)) {
+                return;
+            }
+
+            const slotCount = getSlotCount(layoutSettings);
+            const fallbackSeatOrder = normalizeSeatOrder(state.seatOrder, slotCount, buildDefaultSeatOrder(slotCount));
+            const nextSeatOrder = Object.prototype.hasOwnProperty.call(rawValue, "seatOrder")
+                ? normalizeSeatOrder(rawValue.seatOrder, slotCount)
+                : fallbackSeatOrder;
+
+            state.layoutSettings = layoutSettings;
+            state.seatOrder = nextSeatOrder;
+            state.layoutUpdatedAt = remoteUpdatedAt || state.layoutUpdatedAt;
+            cacheLayoutState();
+            render();
+        }
+
+        async function saveLayoutConfig() {
+            state.layoutUpdatedAt = Date.now();
+            cacheLayoutState();
+
+            if (!layoutRef) {
+                return;
+            }
+
+            try {
+                await layoutRef.set({
+                    layoutSettings: state.layoutSettings,
+                    seatOrder: serializeSeatOrder(state.seatOrder),
+                    updated_at: new Date(state.layoutUpdatedAt).toISOString()
+                });
+            } catch (error) {
+                console.error("Firebase layout save error:", error);
+            }
+        }
+
+        function toggleResetSlot(slotIndex) {
+            const currentIndex = state.resetSelection.indexOf(slotIndex);
+
+            if (currentIndex >= 0) {
+                state.resetSelection.splice(currentIndex, 1);
+            } else if (slotIndex >= 0 && slotIndex < getSlotCount()) {
+                state.resetSelection.push(slotIndex);
+            }
+
+            renderBoard();
+        }
+
+        function openOrCloseSettings() {
+            state.settingsOpen = !state.settingsOpen;
+
+            if (!state.settingsOpen) {
+                state.resetMode = false;
+                state.resetSelection = [];
+            }
+
+            render();
+        }
+
+        function toggleExpertMode() {
+            state.expertMode = !state.expertMode;
+            render();
+        }
+
+        async function applyDimensions() {
+            const nextRows = normalizeInt(elements.rowsInput.value, state.layoutSettings.seatRows);
+            const nextCols = normalizeInt(elements.colsInput.value, state.layoutSettings.seatCols);
+
+            state.layoutSettings = normalizeLayoutSettings({
+                seatRows: nextRows,
+                seatCols: nextCols,
+                colGaps: state.layoutSettings.colGaps.filter((index) => index < nextCols - 1),
+                rowGaps: state.layoutSettings.rowGaps.filter((index) => index < nextRows - 1),
+                rotation180: state.layoutSettings.rotation180
+            });
+            state.seatOrder = normalizeSeatOrder(state.seatOrder, getSlotCount(), state.seatOrder);
+            state.resetMode = false;
+            state.resetSelection = [];
+            render();
+            await saveLayoutConfig();
+        }
+
+        async function toggleGap(kind, displayIndex) {
+            const storedIndex = mapGapIndex(kind, displayIndex);
+            const key = kind === "col" ? "colGaps" : "rowGaps";
+            const nextList = [...state.layoutSettings[key]];
+            const existingIndex = nextList.indexOf(storedIndex);
+
+            if (existingIndex >= 0) {
+                nextList.splice(existingIndex, 1);
             } else {
-                state.showDetails = !state.showDetails;
+                nextList.push(storedIndex);
+                nextList.sort((left, right) => left - right);
             }
 
-            renderControls();
-            renderBoard();
-        });
+            state.layoutSettings = normalizeLayoutSettings({
+                ...state.layoutSettings,
+                [key]: nextList
+            });
+            render();
+            await saveLayoutConfig();
+        }
 
-        elements.rotateLayout.addEventListener("click", rotateLayout180);
+        async function toggleRotation() {
+            state.layoutSettings = normalizeLayoutSettings({
+                ...state.layoutSettings,
+                rotation180: !state.layoutSettings.rotation180
+            });
+            render();
+            await saveLayoutConfig();
+        }
 
-        applyStaticText();
-        loadSavedState();
-        renderControls();
-        renderBoard();
+        function startSeatReset() {
+            state.resetMode = true;
+            state.resetSelection = [];
+            render();
+        }
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const statusRef = db.ref("studyroom/live_status");
-        layoutRef = db.ref(LAYOUT_PATH);
+        async function finishSeatReset() {
+            state.seatOrder = buildPreviewSeatOrder();
+            state.resetMode = false;
+            state.resetSelection = [];
+            render();
+            await saveLayoutConfig();
+        }
 
-        layoutRef.on("value", (snapshot) => {
-            state.hasRemoteLayout = true;
-
-            if (applySharedLayout(snapshot.val())) {
-                if (syncSeatOrder()) {
-                    saveState();
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
                 }
-                renderBoard();
-                return;
-            }
 
-            saveState();
-        }, (error) => {
-            console.error("Firebase layout sync error:", error);
+                state.firebaseReady = true;
+                const db = firebase.database();
+                layoutRef = db.ref(LAYOUT_CONFIG_PATH);
+
+                db.ref(LIVE_STATUS_PATH).on("value", (snapshot) => {
+                    applyLiveStatusSnapshot(snapshot.val() || {});
+                }, (error) => {
+                    elements.updateTime.textContent = TEXT.connectionError;
+                    console.error("Firebase live status error:", error);
+                });
+
+                layoutRef.on("value", (snapshot) => {
+                    applyLayoutSnapshot(snapshot.val());
+                }, (error) => {
+                    console.error("Firebase layout sync error:", error);
+                });
+            } catch (error) {
+                elements.updateTime.textContent = TEXT.connectionError;
+                console.error("Firebase init error:", error);
+            }
+        }
+
+        elements.settingsToggle.addEventListener("click", openOrCloseSettings);
+        elements.modeToggle.addEventListener("click", toggleExpertMode);
+        elements.applyDimensions.addEventListener("click", () => {
+            applyDimensions();
+        });
+        elements.rotateLayout.addEventListener("click", () => {
+            toggleRotation();
+        });
+        elements.resetSeats.addEventListener("click", () => {
+            if (state.resetMode) {
+                finishSeatReset();
+            } else {
+                startSeatReset();
+            }
         });
 
-        statusRef.on("value", (snapshot) => {
-            const data = snapshot.val() || {};
-            state.seats = normalizeSeats(data.seats);
-            state.hasSeatSnapshot = true;
-
-            if (syncSeatOrder() && state.hasRemoteLayout) {
-                saveState();
-            }
-
-            renderStats(data);
-            renderBoard();
-        }, (error) => {
-            elements.updateTime.textContent = TEXT.connectionError;
-            console.error("Firebase data error:", error);
-        });
+        renderStaticText();
+        loadSavedLayout();
+        render();
+        initializeFirebase();
     </script>
 </body>
 </html>
