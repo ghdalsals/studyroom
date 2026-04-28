@@ -44,7 +44,8 @@
             font-family: "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
             background: var(--page-bg);
             color: var(--body-text);
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         button,
@@ -54,12 +55,12 @@
 
         .viewport-shell {
             width: 100%;
-            height: 100dvh;
+            min-height: 100dvh;
             padding: var(--viewport-pad);
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .page {
@@ -84,12 +85,12 @@
             align-items: start;
             gap: 14px;
             margin: 0 auto 18px;
-            max-width: 430px;
+            max-width: 660px;
         }
 
         .dashboard {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 14px;
         }
 
@@ -111,10 +112,14 @@
             background: var(--occupied-seat);
         }
 
+        .stat-box.uncertain {
+            background: var(--uncertain-seat);
+        }
+
         .topbar {
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: stretch;
             gap: 12px;
             margin: 0;
         }
@@ -130,6 +135,7 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             align-items: center;
             width: 168px;
+            height: 44px;
             padding: 4px;
             border: 1px solid var(--button-border);
             border-radius: 16px;
@@ -172,9 +178,10 @@
 
         .top-button {
             width: 92px;
+            height: 44px;
             border: 1px solid var(--button-border);
             border-radius: 14px;
-            padding: 10px 0;
+            padding: 0;
             font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
@@ -213,13 +220,14 @@
             gap: 10px;
             flex-wrap: wrap;
             align-items: end;
-            margin-bottom: 14px;
+            margin-bottom: 0;
         }
 
         .settings-toolbar button {
+            height: 44px;
             border: 1px solid var(--button-border);
             border-radius: 999px;
-            padding: 10px 16px;
+            padding: 0 16px;
             font-size: 0.92rem;
             font-weight: 700;
             cursor: pointer;
@@ -242,6 +250,7 @@
 
         .settings-field input {
             width: 96px;
+            height: 44px;
             padding: 10px 12px;
             border: 1px solid var(--seat-border);
             border-radius: 12px;
@@ -260,6 +269,10 @@
             font-size: 0.86rem;
             color: var(--timestamp-text);
             text-align: center;
+        }
+
+        .settings-subtle[hidden] {
+            display: none;
         }
 
         .gap-editor {
@@ -403,6 +416,40 @@
             transition: transform 0.2s ease;
         }
 
+        .seat-grid .gap-toggle {
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            align-self: stretch;
+            justify-self: stretch;
+            z-index: 1;
+        }
+
+        .seat-grid .gap-toggle::before {
+            background: rgba(148, 163, 184, 0.54);
+            box-shadow: var(--soft-shadow);
+        }
+
+        .seat-grid .gap-toggle.col::before {
+            width: min(8px, calc(100% - 2px));
+            height: max(28px, calc(100% - 18px));
+        }
+
+        .seat-grid .gap-toggle.row::before {
+            width: max(28px, calc(100% - 18px));
+            height: min(8px, calc(100% - 2px));
+        }
+
+        .seat-grid .gap-toggle.active::before {
+            background: var(--button-text);
+            transform: translate(-50%, -50%) scale(1.08);
+        }
+
+        .seat-grid .gap-toggle:hover::before {
+            background: rgba(51, 65, 85, 0.72);
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
         .seat-card {
             border: 1px solid var(--seat-border);
             border-radius: 12px;
@@ -542,6 +589,7 @@
             <div class="dashboard">
                 <div class="stat-box available"><span id="available-label">사용 가능</span>: <span id="count-empty">0</span></div>
                 <div class="stat-box occupied"><span id="occupied-label">사용 중</span>: <span id="count-occupied">0</span></div>
+                <div class="stat-box uncertain"><span id="uncertain-label">확인 필요</span>: <span id="count-uncertain">0</span></div>
             </div>
 
             <div class="topbar">
@@ -570,7 +618,7 @@
             </div>
 
             <div class="settings-editor">
-                <div id="settings-note" class="settings-subtle">책상 사이를 클릭하면 간격이 생기거나 사라집니다.</div>
+                <div id="settings-note" class="settings-subtle" hidden></div>
                 <div id="gap-editor" class="gap-editor"></div>
             </div>
         </section>
@@ -595,6 +643,7 @@
             pageTitle: "실시간 좌석 현황",
             available: "사용 가능",
             occupied: "사용 중",
+            uncertain: "확인 필요",
             settings: "설정",
             general: "일반",
             expert: "전문가",
@@ -604,7 +653,7 @@
             resetSeats: "좌석 재설정",
             finishReset: "재설정 완료",
             rotateLayout: "180도 회전",
-            gapEditor: "책상 사이를 클릭하면 간격이 생기거나 사라집니다.",
+            gapEditor: "",
             resetHelp: "슬롯을 클릭한 순서대로 seat_1, seat_2, seat_3 ... 이 배치됩니다.",
             emptySlot: "빈 슬롯",
             noInfo: "confidence -",
@@ -640,12 +689,14 @@
             layoutSettings: normalizeLayoutSettings(DEFAULT_LAYOUT_SETTINGS),
             seatOrder: buildDefaultSeatOrder(getSlotCount(DEFAULT_LAYOUT_SETTINGS)),
             layoutUpdatedAt: 0,
+            pendingLayoutUpdatedAt: 0,
             visualRotationDeg: 0,
             visualRotation180: false,
             rotationAnimationUntil: 0,
             liveStatus: {
                 emptyCount: 0,
                 occupiedCount: 0,
+                uncertainCount: 0,
                 updatedAt: "",
                 seatsById: {}
             },
@@ -654,6 +705,7 @@
 
         let layoutRef = null;
         let viewportFitFrame = 0;
+        let deferredLayoutSnapshot = null;
 
         const elements = {
             viewportShell: document.getElementById("viewport-shell"),
@@ -661,8 +713,10 @@
             pageTitle: document.getElementById("page-title"),
             availableLabel: document.getElementById("available-label"),
             occupiedLabel: document.getElementById("occupied-label"),
+            uncertainLabel: document.getElementById("uncertain-label"),
             countEmpty: document.getElementById("count-empty"),
             countOccupied: document.getElementById("count-occupied"),
+            countUncertain: document.getElementById("count-uncertain"),
             settingsToggle: document.getElementById("settings-toggle"),
             modeToggle: document.getElementById("mode-toggle"),
             modeGeneral: document.getElementById("mode-general"),
@@ -921,17 +975,17 @@
 
         function normalizeLiveSeats(rawSeats) {
             const source = Array.isArray(rawSeats)
-                ? rawSeats
+                ? rawSeats.map((seat) => [null, seat])
                 : rawSeats && typeof rawSeats === "object"
-                    ? Object.values(rawSeats)
+                    ? Object.entries(rawSeats)
                     : [];
 
             return source
-                .filter(Boolean)
-                .map((seat) => ({
-                    seat_id: String(seat.seat_id || "").trim(),
-                    state: normalizeSeatState(seat.state),
-                    confidence: normalizeConfidence(seat.confidence)
+                .filter(([, seat]) => Boolean(seat))
+                .map(([seatKey, seat]) => ({
+                    seat_id: String((seat && seat.seat_id) || seatKey || "").trim(),
+                    state: normalizeSeatState(seat && seat.state),
+                    confidence: normalizeConfidence(seat && seat.confidence)
                 }))
                 .filter((seat) => seat.seat_id)
                 .sort((left, right) => collator.compare(left.seat_id, right.seat_id));
@@ -1061,7 +1115,9 @@
             const naturalHeight = elements.pageRoot.offsetHeight;
             const widthScale = naturalWidth > 0 ? availableWidth / naturalWidth : 1;
             const heightScale = naturalHeight > 0 ? availableHeight / naturalHeight : 1;
-            const nextScale = Math.min(1, widthScale, heightScale);
+            const nextScale = state.settingsOpen
+                ? Math.min(1, widthScale)
+                : Math.min(1, widthScale, heightScale);
 
             elements.pageRoot.style.setProperty("--page-scale", String(nextScale));
         }
@@ -1082,6 +1138,7 @@
             elements.pageTitle.textContent = TEXT.pageTitle;
             elements.availableLabel.textContent = TEXT.available;
             elements.occupiedLabel.textContent = TEXT.occupied;
+            elements.uncertainLabel.textContent = TEXT.uncertain;
             elements.settingsToggle.textContent = TEXT.settings;
             elements.modeGeneral.textContent = TEXT.general;
             elements.modeExpert.textContent = TEXT.expert;
@@ -1100,13 +1157,15 @@
             elements.rowsInput.value = String(state.layoutSettings.seatRows);
             elements.colsInput.value = String(state.layoutSettings.seatCols);
             elements.resetSeats.textContent = state.resetMode ? TEXT.finishReset : TEXT.resetSeats;
-            elements.settingsNote.textContent = state.resetMode ? TEXT.resetHelp : TEXT.gapEditor;
-            elements.gapEditor.hidden = state.resetMode;
+            elements.settingsNote.hidden = !state.resetMode;
+            elements.settingsNote.textContent = state.resetMode ? TEXT.resetHelp : "";
+            elements.gapEditor.hidden = true;
         }
 
         function renderStats() {
             elements.countEmpty.textContent = String(state.liveStatus.emptyCount);
             elements.countOccupied.textContent = String(state.liveStatus.occupiedCount);
+            elements.countUncertain.textContent = String(state.liveStatus.uncertainCount);
             elements.updateTime.textContent = formatUpdatedAt(state.liveStatus.updatedAt);
         }
 
@@ -1114,6 +1173,7 @@
             const seatOrder = getSeatOrderForRender();
             const showDetails = shouldShowDetails();
             const slotCount = getSlotCount();
+            const showGapControls = state.settingsOpen && !state.resetMode;
 
             syncVisualRotation();
             elements.boardStage.classList.toggle("is-rotated", state.layoutSettings.rotation180);
@@ -1167,54 +1227,39 @@
 
                 elements.seatGrid.appendChild(card);
             }
+
+            if (showGapControls) {
+                const rowGapSet = new Set(state.layoutSettings.rowGaps);
+                const colGapSet = new Set(state.layoutSettings.colGaps);
+
+                for (let colGapIndex = 0; colGapIndex < state.layoutSettings.seatCols - 1; colGapIndex += 1) {
+                    const button = document.createElement("button");
+
+                    button.type = "button";
+                    button.className = "gap-toggle col" + (colGapSet.has(colGapIndex) ? " active" : "");
+                    button.style.gridRow = "1 / " + (state.layoutSettings.seatRows * 2);
+                    button.style.gridColumn = String(colGapIndex * 2 + 2);
+                    button.setAttribute("aria-label", "열 간격 조정");
+                    button.addEventListener("click", () => toggleStoredGap("col", colGapIndex));
+                    elements.seatGrid.appendChild(button);
+                }
+
+                for (let rowGapIndex = 0; rowGapIndex < state.layoutSettings.seatRows - 1; rowGapIndex += 1) {
+                    const button = document.createElement("button");
+
+                    button.type = "button";
+                    button.className = "gap-toggle row" + (rowGapSet.has(rowGapIndex) ? " active" : "");
+                    button.style.gridRow = String(rowGapIndex * 2 + 2);
+                    button.style.gridColumn = "1 / " + (state.layoutSettings.seatCols * 2);
+                    button.setAttribute("aria-label", "행 간격 조정");
+                    button.addEventListener("click", () => toggleStoredGap("row", rowGapIndex));
+                    elements.seatGrid.appendChild(button);
+                }
+            }
         }
 
         function renderGapEditor() {
-            if (!state.settingsOpen || state.resetMode) {
-                elements.gapEditor.innerHTML = "";
-                return;
-            }
-
-            const totalRows = state.layoutSettings.seatRows * 2 - 1;
-            const totalCols = state.layoutSettings.seatCols * 2 - 1;
-            const rowGapSet = new Set(state.layoutSettings.rowGaps.map((index) => mapGapIndex("row", index)));
-            const colGapSet = new Set(state.layoutSettings.colGaps.map((index) => mapGapIndex("col", index)));
-            const grid = document.createElement("div");
-
             elements.gapEditor.innerHTML = "";
-            grid.className = "editor-grid";
-            grid.style.gridTemplateColumns = "repeat(" + totalCols + ", auto)";
-            grid.style.gridTemplateRows = "repeat(" + totalRows + ", auto)";
-
-            for (let row = 0; row < totalRows; row += 1) {
-                for (let col = 0; col < totalCols; col += 1) {
-                    let cell;
-
-                    if (row % 2 === 0 && col % 2 === 0) {
-                        cell = document.createElement("div");
-                        cell.className = "editor-seat";
-                    } else if (row % 2 === 0 && col % 2 === 1) {
-                        const displayGapIndex = Math.floor(col / 2);
-                        cell = document.createElement("button");
-                        cell.type = "button";
-                        cell.className = "gap-toggle col" + (colGapSet.has(displayGapIndex) ? " active" : "");
-                        cell.addEventListener("click", () => toggleGap("col", displayGapIndex));
-                    } else if (row % 2 === 1 && col % 2 === 0) {
-                        const displayGapIndex = Math.floor(row / 2);
-                        cell = document.createElement("button");
-                        cell.type = "button";
-                        cell.className = "gap-toggle row" + (rowGapSet.has(displayGapIndex) ? " active" : "");
-                        cell.addEventListener("click", () => toggleGap("row", displayGapIndex));
-                    } else {
-                        cell = document.createElement("div");
-                        cell.className = "gap-corner";
-                    }
-
-                    grid.appendChild(cell);
-                }
-            }
-
-            elements.gapEditor.appendChild(grid);
         }
 
         function render() {
@@ -1241,6 +1286,9 @@
                 occupiedCount: Number.isFinite(Number(rawValue && rawValue.occupied_count))
                     ? Number(rawValue.occupied_count)
                     : seats.filter((seat) => seat.state === "occupied").length,
+                uncertainCount: Number.isFinite(Number(rawValue && rawValue.uncertain_count))
+                    ? Number(rawValue.uncertain_count)
+                    : seats.filter((seat) => seat.state === "uncertain").length,
                 updatedAt: rawValue && rawValue.updated_at ? rawValue.updated_at : ""
             };
 
@@ -1249,15 +1297,44 @@
         }
 
         function shouldApplyRemoteLayout(remoteUpdatedAt) {
-            if (!remoteUpdatedAt && state.layoutUpdatedAt) {
+            const localBarrierUpdatedAt = Math.max(state.layoutUpdatedAt, state.pendingLayoutUpdatedAt);
+
+            if (!remoteUpdatedAt && localBarrierUpdatedAt) {
                 return false;
             }
 
-            if (remoteUpdatedAt && state.layoutUpdatedAt && remoteUpdatedAt < state.layoutUpdatedAt) {
+            if (remoteUpdatedAt && localBarrierUpdatedAt && remoteUpdatedAt < localBarrierUpdatedAt) {
                 return false;
             }
 
             return true;
+        }
+
+        function deferLayoutSnapshot(rawValue) {
+            deferredLayoutSnapshot = rawValue;
+        }
+
+        function flushDeferredLayoutSnapshot() {
+            if (!deferredLayoutSnapshot || state.resetMode || state.pendingLayoutUpdatedAt) {
+                return;
+            }
+
+            const nextSnapshot = deferredLayoutSnapshot;
+            deferredLayoutSnapshot = null;
+            applyLayoutSnapshot(nextSnapshot);
+        }
+
+        async function refreshLayoutSnapshot() {
+            if (!layoutRef || state.resetMode || state.pendingLayoutUpdatedAt) {
+                return;
+            }
+
+            try {
+                const snapshot = await layoutRef.once("value");
+                applyLayoutSnapshot(snapshot.val());
+            } catch (error) {
+                console.error("Firebase layout refresh error:", error);
+            }
         }
 
         function syncVisualRotation(immediate = false) {
@@ -1276,7 +1353,12 @@
         }
 
         function applyLayoutSnapshot(rawValue) {
-            if (!rawValue || state.resetMode) {
+            if (!rawValue) {
+                return;
+            }
+
+            if (state.resetMode || state.pendingLayoutUpdatedAt) {
+                deferLayoutSnapshot(rawValue);
                 return;
             }
 
@@ -1293,10 +1375,9 @@
             }
 
             const slotCount = getSlotCount(layoutSettings);
-            const fallbackSeatOrder = normalizeSeatOrder(state.seatOrder, slotCount, buildDefaultSeatOrder(slotCount));
             const nextSeatOrder = Object.prototype.hasOwnProperty.call(rawValue, "seatOrder")
                 ? normalizeSeatOrder(rawValue.seatOrder, slotCount)
-                : fallbackSeatOrder;
+                : buildDefaultSeatOrder(slotCount);
 
             state.layoutSettings = layoutSettings;
             state.seatOrder = nextSeatOrder;
@@ -1306,21 +1387,37 @@
         }
 
         async function saveLayoutConfig() {
-            state.layoutUpdatedAt = Date.now();
             cacheLayoutState();
 
+            const nextLayoutUpdatedAt = Date.now();
+            const payload = {
+                layoutSettings: state.layoutSettings,
+                seatOrder: serializeSeatOrder(state.seatOrder),
+                updated_at: new Date(nextLayoutUpdatedAt).toISOString()
+            };
+
             if (!layoutRef) {
+                flushDeferredLayoutSnapshot();
                 return;
             }
 
+            state.pendingLayoutUpdatedAt = nextLayoutUpdatedAt;
+            let didSaveSucceed = false;
+
             try {
-                await layoutRef.set({
-                    layoutSettings: state.layoutSettings,
-                    seatOrder: serializeSeatOrder(state.seatOrder),
-                    updated_at: new Date(state.layoutUpdatedAt).toISOString()
-                });
+                await layoutRef.set(payload);
+                state.layoutUpdatedAt = nextLayoutUpdatedAt;
+                didSaveSucceed = true;
             } catch (error) {
                 console.error("Firebase layout save error:", error);
+            } finally {
+                state.pendingLayoutUpdatedAt = 0;
+                cacheLayoutState();
+                flushDeferredLayoutSnapshot();
+
+                if (!didSaveSucceed) {
+                    refreshLayoutSnapshot();
+                }
             }
         }
 
@@ -1337,6 +1434,7 @@
         }
 
         function openOrCloseSettings() {
+            const wasResetMode = state.resetMode;
             state.settingsOpen = !state.settingsOpen;
 
             if (!state.settingsOpen) {
@@ -1345,6 +1443,11 @@
             }
 
             render();
+
+            if (wasResetMode && !state.resetMode) {
+                flushDeferredLayoutSnapshot();
+                refreshLayoutSnapshot();
+            }
         }
 
         function toggleExpertMode() {
@@ -1353,6 +1456,7 @@
         }
 
         async function applyDimensions() {
+            const wasResetMode = state.resetMode;
             const nextRows = normalizeInt(elements.rowsInput.value, state.layoutSettings.seatRows);
             const nextCols = normalizeInt(elements.colsInput.value, state.layoutSettings.seatCols);
 
@@ -1368,10 +1472,13 @@
             state.resetSelection = [];
             render();
             await saveLayoutConfig();
+
+            if (wasResetMode) {
+                flushDeferredLayoutSnapshot();
+            }
         }
 
-        async function toggleGap(kind, displayIndex) {
-            const storedIndex = mapGapIndex(kind, displayIndex);
+        async function toggleStoredGap(kind, storedIndex) {
             const key = kind === "col" ? "colGaps" : "rowGaps";
             const nextList = [...state.layoutSettings[key]];
             const existingIndex = nextList.indexOf(storedIndex);
@@ -1389,6 +1496,10 @@
             });
             render();
             await saveLayoutConfig();
+        }
+
+        async function toggleGap(kind, displayIndex) {
+            await toggleStoredGap(kind, mapGapIndex(kind, displayIndex));
         }
 
         async function toggleRotation() {
@@ -1413,6 +1524,7 @@
             state.resetSelection = [];
             render();
             await saveLayoutConfig();
+            flushDeferredLayoutSnapshot();
         }
 
         function initializeFirebase() {
